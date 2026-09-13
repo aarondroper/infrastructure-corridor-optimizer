@@ -99,21 +99,145 @@ class ArcGISClient:
         *,
         where: str,
         out_fields: Sequence[str] = ("*",),
+        geometry: Mapping[str, float] | None = None,
+        geometry_type: str = "esriGeometryEnvelope",
+        in_crs_epsg: int | None = None,
         out_crs_epsg: int | None = None,
     ) -> list[dict[str, Any]]:
+        payload = self.query_feature_payload(
+            layer_url,
+            where=where,
+            out_fields=out_fields,
+            geometry=geometry,
+            geometry_type=geometry_type,
+            in_crs_epsg=in_crs_epsg,
+            out_crs_epsg=out_crs_epsg,
+        )
+        if payload.get("exceededTransferLimit") is True:
+            raise SourceAccessError(
+                f"ArcGIS query exceeded the transfer limit; refusing partial features: {layer_url}"
+            )
+        return _feature_list(payload, layer_url)
+
+    def query_feature_payload(
+        self,
+        layer_url: str,
+        *,
+        where: str,
+        out_fields: Sequence[str] = ("*",),
+        object_ids: Sequence[int] | None = None,
+        geometry: Mapping[str, float] | None = None,
+        geometry_type: str = "esriGeometryEnvelope",
+        in_crs_epsg: int | None = None,
+        out_crs_epsg: int | None = None,
+    ) -> dict[str, Any]:
+        """Query features while retaining response metadata and completeness flags."""
+
+        params: dict[str, str | int | bool] = {
+            "where": where,
+            "outFields": ",".join(out_fields),
+            "returnGeometry": True,
+        }
+        if object_ids is not None:
+            params["objectIds"] = ",".join(str(object_id) for object_id in object_ids)
+        if geometry is not None:
+            params.update(
+                {
+                    "geometry": json.dumps(geometry, separators=(",", ":")),
+                    "geometryType": geometry_type,
+                    "spatialRel": "esriSpatialRelIntersects",
+                }
+            )
+        if in_crs_epsg:
+            params["inSR"] = in_crs_epsg
+        if out_crs_epsg:
+            params["outSR"] = out_crs_epsg
         payload = self.fetch_json(
             f"{layer_url.rstrip('/')}/query",
-            {
-                "where": where,
-                "outFields": ",".join(out_fields),
-                "returnGeometry": True,
-                **({"outSR": out_crs_epsg} if out_crs_epsg else {}),
-            },
+            params,
         )
-        features = payload.get("features")
-        if not isinstance(features, list):
-            raise SourceAccessError(f"ArcGIS query did not return a feature list: {layer_url}")
-        return features
+        _feature_list(payload, layer_url)
+        return payload
+
+    def query_object_ids(
+        self,
+        layer_url: str,
+        *,
+        where: str,
+        geometry: Mapping[str, float] | None = None,
+        geometry_type: str = "esriGeometryEnvelope",
+        in_crs_epsg: int | None = None,
+    ) -> list[int]:
+        """Return object IDs for a bounded query before paged feature retrieval."""
+
+        params: dict[str, str | int | bool] = {
+            "where": where,
+            "returnGeometry": False,
+            "returnIdsOnly": True,
+        }
+        if geometry is not None:
+            params.update(
+                {
+                    "geometry": json.dumps(geometry, separators=(",", ":")),
+                    "geometryType": geometry_type,
+                    "spatialRel": "esriSpatialRelIntersects",
+                }
+            )
+        if in_crs_epsg:
+            params["inSR"] = in_crs_epsg
+        payload = self.fetch_json(f"{layer_url.rstrip('/')}/query", params)
+        if payload.get("exceededTransferLimit") is True:
+            raise SourceAccessError(
+                f"ArcGIS object-ID query exceeded the transfer limit: {layer_url}"
+            )
+        object_ids = payload.get("objectIds", [])
+        if not isinstance(object_ids, list):
+            raise SourceAccessError(f"ArcGIS object-ID query did not return a list: {layer_url}")
+        try:
+            return [int(object_id) for object_id in object_ids]
+        except (TypeError, ValueError) as exc:
+            raise SourceAccessError(f"ArcGIS object-ID query returned an invalid ID: {layer_url}") from exc
+
+
+def _feature_list(payload: Mapping[str, Any], layer_url: str) -> list[dict[str, Any]]:
+    features = payload.get("features")
+    if not isinstance(features, list) or not all(isinstance(feature, dict) for feature in features):
+        raise SourceAccessError(f"ArcGIS query did not return a feature list: {layer_url}")
+    return features
+
+
+def validate_feature_payload_crs(payload: Mapping[str, Any], expected_epsg: int, layer_url: str) -> None:
+    """Require an ArcGIS feature query response to declare the requested CRS."""
+
+    spatial_reference = payload.get("spatialReference")
+    if not isinstance(spatial_reference, Mapping):
+        raise SourceValidationError(f"ArcGIS query has no output spatial reference: {layer_url}")
+    observed = spatial_reference.get("latestWkid", spatial_reference.get("wkid"))
+    if observed != expected_epsg:
+        raise SourceValidationError(
+            f"ArcGIS query CRS mismatch: expected EPSG:{expected_epsg}, observed {observed!r}: {layer_url}"
+        )
+
+
+def validate_feature_geometries(
+    features: Sequence[Mapping[str, Any]], expected_geometry_type: str, layer_url: str
+) -> None:
+    """Reject null or structurally incompatible ArcGIS feature geometries."""
+
+    geometry_members = {
+        "esriGeometryPoint": ("x", "y"),
+        "esriGeometryPolyline": ("paths",),
+        "esriGeometryPolygon": ("rings",),
+    }
+    required_members = geometry_members.get(expected_geometry_type)
+    if required_members is None:
+        raise SourceValidationError(f"unsupported expected geometry type: {expected_geometry_type}")
+    for index, feature in enumerate(features):
+        geometry = feature.get("geometry")
+        if not isinstance(geometry, Mapping) or any(member not in geometry for member in required_members):
+            raise SourceValidationError(
+                f"ArcGIS feature {index} has invalid {expected_geometry_type} geometry: {layer_url}"
+            )
 
 
 def _attribute(properties: Mapping[str, Any], *names: str) -> Any:

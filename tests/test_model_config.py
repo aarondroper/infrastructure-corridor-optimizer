@@ -45,6 +45,7 @@ class ModelConfigTests(unittest.TestCase):
         self.assertTrue(policy["allow_fallback"])
         self.assertEqual(policy["processing_envelope_crs_epsg"], config["source_crs_epsg"])
         self.assertEqual(policy["target_analysis_crs_epsg"], config["analysis_crs_epsg"])
+        self.assertEqual(config["arcgis_query_page_size"], 200)
 
 
 if __name__ == "__main__":

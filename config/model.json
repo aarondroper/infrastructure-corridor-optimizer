@@ -42,7 +42,11 @@
       "role": "protected-land source candidate",
       "url": "https://mapprod3.environment.nsw.gov.au/arcgis/rest/services/EDP/Estate/MapServer/0",
       "access": "ArcGIS REST",
-      "expected_layer": {"id": 0, "name": "NPWS Estate", "geometry_type": "esriGeometryPolygon"}
+      "service_crs_epsg": 4283,
+      "expected_layer": {"id": 0, "name": "NPWS Estate", "geometry_type": "esriGeometryPolygon"},
+      "acquisition_layers": [
+        {"layer_id": 0, "component": "protected_land", "geometry_type": "esriGeometryPolygon", "out_fields": ["OBJECTID", "NAME", "NAME_SHORT", "TYPE", "IUCN", "GAZ_AREA", "GIS_AREA", "RES_NO", "GAZ_DATE"]}
+      ]
     },
     {
       "id": "nsw-svtm",
@@ -55,10 +59,17 @@
       "role": "hydrography source candidate",
       "url": "https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Hydrography/MapServer",
       "access": "ArcGIS REST",
+      "service_crs_epsg": 3857,
       "expected_layers": [
         {"id": 3, "name": "Hydroline"},
         {"id": 4, "name": "Named Watercourse"},
         {"id": 10, "name": "HydroArea"}
+      ],
+      "acquisition_layers": [
+        {"layer_id": 3, "component": "hydrography_line", "geometry_type": "esriGeometryPolyline", "out_fields": ["objectid", "hydroname", "hydronametype", "perenniality", "hierarchy", "hydrotype", "relevance"]},
+        {"layer_id": 5, "component": "named_watercourse_ss", "geometry_type": "esriGeometryPolyline", "out_fields": ["objectid", "hydroname", "hydronametype", "perenniality", "hierarchy", "hydrotype", "relevance"]},
+        {"layer_id": 6, "component": "named_watercourse_ls", "geometry_type": "esriGeometryPolyline", "out_fields": ["objectid", "hydroname", "hydronametype", "perenniality", "hierarchy", "hydrotype", "relevance"]},
+        {"layer_id": 10, "component": "hydrography_area", "geometry_type": "esriGeometryPolygon", "out_fields": ["objectid", "hydroname", "hydronametype", "perenniality", "hydrotype", "relevance"]}
       ]
     },
     {
@@ -66,13 +77,19 @@
       "role": "road and railway source candidate",
       "url": "https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Transport_Theme_multiCRS/FeatureServer",
       "access": "ArcGIS REST",
+      "service_crs_epsg": 7844,
       "expected_layers": [
         {"id": 5, "name": "RoadSegment", "geometry_type": "esriGeometryPolyline"},
         {"id": 7, "name": "Railway", "geometry_type": "esriGeometryPolyline"}
+      ],
+      "acquisition_layers": [
+        {"layer_id": 5, "component": "roads", "geometry_type": "esriGeometryPolyline", "out_fields": ["OBJECTID", "roadnamebase", "roadnametype", "functionhierarchy", "roadontype", "surface", "lanecount", "operationalstatus", "relevance"]},
+        {"layer_id": 7, "component": "railways", "geometry_type": "esriGeometryPolyline", "out_fields": ["OBJECTID", "railwayname", "gauge", "railontype", "operationalstatus", "relevance"]}
       ]
     }
   ],
   "candidate_grid_resolutions_m": [50, 100, 150],
+  "arcgis_query_page_size": 200,
   "terrain_source_policy": {
     "primary_source_id": "elvis-nsw-dem",
     "fallback_source_id": "copernicus-dem-glo-30",

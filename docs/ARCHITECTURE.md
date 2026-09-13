@@ -89,8 +89,11 @@ topology guards. The CLIs in `scripts/acquire_sources.py` and
 and select the configured ELVIS/NSW primary or Copernicus GLO-30 fallback with
 provenance. Actual portal acquisition, raster-pixel reading, and reprojection remain
 future work; the selected source policy does not claim those operations are complete.
-Acquisition adapters for the terrain, environmental, hydrography, road, and railway
-layers remain future work.
+`scripts/acquire_vector_sources.py` now provides bounded, object-ID-paginated ArcGIS
+acquisition for the NPWS, hydrography, road, and railway layers, requesting EPSG:7856
+output and rejecting incomplete pages. It writes external per-layer ArcGIS JSON
+feature collections and a compact manifest; it does not clip, repair, rasterize, or
+derive cost surfaces. Terrain raster and SVTM WMS acquisition remain future work.
 
 ### 2. Study-area preparation
 

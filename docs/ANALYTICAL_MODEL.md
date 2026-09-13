@@ -114,7 +114,7 @@ not be inferred solely from the composite score.
 
 The current Python core intentionally has no GIS dependency. It validates normalized
 rectangular grids, combines layers, and routes them. Priority 3 now has standard-
-library acquisition boundaries for the fixed GA endpoint records and terrain artifact
-selection; it still needs source adapters/coverage checks for the remaining components,
-DEM acquisition/pixel processing, clipping/reprojection, raster/vector derivation,
-route assessment, and generated web assets.
+library acquisition boundaries for fixed endpoints, selected terrain artifacts, and
+bounded ArcGIS vector layers; it still needs DEM acquisition/pixel processing,
+SVTM acquisition, clipping/reprojection validation, raster/vector derivation, route
+assessment, and generated web assets.

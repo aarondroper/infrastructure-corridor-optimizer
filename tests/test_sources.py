@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from urllib.error import HTTPError
+from urllib.parse import parse_qs, urlparse
 
 from ico_model.sources import (
     ArcGISClient,
@@ -16,6 +17,8 @@ from ico_model.sources import (
     validate_expected_layers,
     validate_expected_layer_names,
     validate_required_layer_type,
+    validate_feature_geometries,
+    validate_feature_payload_crs,
     write_manifest,
 )
 
@@ -89,6 +92,42 @@ class SourceTests(unittest.TestCase):
         with self.assertRaises(SourceAccessError):
             ArcGISClient(opener).fetch_json("https://example.test/service")
 
+    def test_feature_query_carries_bounded_geometry_and_crs(self):
+        observed = {}
+
+        def opener(request, timeout):
+            observed.update(parse_qs(urlparse(request.full_url).query))
+            return FakeResponse({"spatialReference": {"wkid": 7856}, "features": []})
+
+        payload = ArcGISClient(opener).query_feature_payload(
+            "https://example.test/0",
+            where="1=1",
+            geometry={"xmin": 150.8, "ymin": -33.2, "xmax": 151.6, "ymax": -32.2},
+            in_crs_epsg=7844,
+            out_crs_epsg=7856,
+        )
+        self.assertEqual(payload["features"], [])
+        self.assertEqual(observed["geometryType"], ["esriGeometryEnvelope"])
+        self.assertEqual(observed["inSR"], ["7844"])
+        self.assertEqual(observed["outSR"], ["7856"])
+        self.assertIn("xmin", observed["geometry"][0])
+
+    def test_transfer_limit_is_never_returned_as_complete_features(self):
+        def opener(request, timeout):
+            return FakeResponse({"exceededTransferLimit": True, "features": []})
+
+        with self.assertRaisesRegex(SourceAccessError, "transfer limit"):
+            ArcGISClient(opener).query_features("https://example.test/0", where="1=1")
+
+    def test_object_id_query_returns_integer_ids(self):
+        def opener(request, timeout):
+            return FakeResponse({"objectIds": [7, "8"]})
+
+        self.assertEqual(
+            ArcGISClient(opener).query_object_ids("https://example.test/0", where="1=1"),
+            [7, 8],
+        )
+
     def test_endpoint_validation_accepts_configured_records(self):
         config = load_config()
         validated = validate_endpoint_features(config["endpoints"], endpoint_features(config))
@@ -148,6 +187,23 @@ class SourceTests(unittest.TestCase):
         validate_expected_layer_names(summary, ["RoadSegment"])
         with self.assertRaises(SourceValidationError):
             validate_required_layer_type(summary, "Raster Layer")
+
+    def test_feature_response_crs_and_geometry_guards(self):
+        payload = {"spatialReference": {"latestWkid": 7856}}
+        validate_feature_payload_crs(payload, 7856, "https://example.test/0")
+        validate_feature_geometries(
+            [{"geometry": {"paths": [[[1, 2], [3, 4]]]}}],
+            "esriGeometryPolyline",
+            "https://example.test/0",
+        )
+        with self.assertRaises(SourceValidationError):
+            validate_feature_payload_crs(payload, 7844, "https://example.test/0")
+        with self.assertRaises(SourceValidationError):
+            validate_feature_geometries(
+                [{"geometry": {"rings": []}}],
+                "esriGeometryPolyline",
+                "https://example.test/0",
+            )
 
 
 if __name__ == "__main__":
