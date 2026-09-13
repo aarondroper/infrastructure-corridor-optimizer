@@ -38,8 +38,8 @@ There is still no verified evidence of:
 
 The feasibility record remains source evidence and scenario context. Source acquisition
 is implemented for fixed endpoints and bounded ArcGIS vector layers, with staged
-streaming output and live end-to-end captures verified for NPWS Estate, roads, and the
-railway layer into `/tmp` only.
+streaming output and live end-to-end captures verified for NPWS Estate, roads,
+hydrography area, and the railway layer into `/tmp` only.
 Terrain source selection has an explicit, tested local-artifact boundary, but no DEM
 has been acquired into this repository and no raster pixels have been processed.
 
@@ -113,10 +113,10 @@ are not implemented.
 Feasibility research has been performed against official source catalogues/services
 and representative live endpoints. The following inputs remain unresolved:
 
-- full external capture of the large hydrography layer, plus terrain and native-
-  vegetation acquisition; the road capture is verified externally, and the bounded
-  vector adapter, staged streaming writer, and source-specific page-size policy are
-  implemented while raw captures remain outside version control;
+- full external capture of the hydrography-line layer, plus terrain and native-
+  vegetation acquisition; the road and hydrography-area captures are verified
+  externally. The bounded vector adapter, staged streaming writer, and source-specific
+  page-size policy are implemented while raw captures remain outside version control;
 - actual ELVIS/NSW DEM acquisition and local artifact availability; Copernicus GLO-30
   is the approved fallback if the primary artifact is unavailable or invalid;
 - normalization details;
@@ -142,6 +142,7 @@ Verified on 13 September 2026:
 - `PYTHONPATH=src python3 scripts/probe_sources.py --output <temporary report> --timeout 20` — live probe validated GA, NPWS, hydrography, and transport; deferred SVTM WMS and reported the NSW elevation no-raster limitation;
 - `PYTHONPATH=src python3 scripts/acquire_vector_sources.py --source-id nsw-npws-estate --output-dir <temporary directory> --timeout 30` — staged and published 20 NPWS polygon features in one complete page;
 - `PYTHONPATH=src python3 scripts/acquire_vector_sources.py --source-id nsw-transport --component roads --output-dir <temporary directory> --timeout 30` — staged and published 46,092 road features in 308 complete pages using the configured 150-ID page size; the artifact was 34.4 MB in `/tmp` and matched its manifest count;
+- `PYTHONPATH=src python3 scripts/acquire_vector_sources.py --source-id nsw-hydrography --component hydrography_area --output-dir <temporary directory> --timeout 30` — staged and published 12,652 hydrography-area features in 64 complete pages; the 15.8 MB artifact matched its manifest count and used EPSG:7856;
 - `PYTHONPATH=src python3 scripts/acquire_vector_sources.py --source-id nsw-transport --component railways --output-dir <temporary directory> --timeout 30` — acquired 415 railway features in three complete pages;
 - the hydrography capture was attempted after resolving sparse child-layer metadata, but the public service stalled during a later page; interruption removed the staged output and no manifest was published;
 - the benchmark produced equal A*/Dijkstra path costs and fewer explored cells for A* at all three sizes;
@@ -168,8 +169,9 @@ and the decision log; the selector does not silently substitute an unconfigured 
 
 Priority 3 is active. The terrain source policy, local artifact contract, bounded
 ArcGIS vector acquisition boundary, staged streaming publication path, and external
-road capture are verified. Hydrography remains unmaterialized because the public
-service stalled during a full capture attempt. The next connected work is to retry or
-otherwise bound hydrography capture where practical, then implement DEM/raster-vector
-derivation, aligned grids, route assessment, and the three offline routes. No frontend
-implementation should precede those data and model checks.
+road and hydrography-area captures are verified. Hydrography-line capture remains
+unmaterialized because the public service stalled during a full capture attempt. The
+next connected work is to address that remaining source boundary where practical,
+then implement DEM/raster-vector derivation, aligned grids, route assessment, and the
+three offline routes. No frontend implementation should precede those data and model
+checks.
