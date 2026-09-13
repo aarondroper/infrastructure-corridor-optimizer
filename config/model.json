@@ -51,8 +51,16 @@
     {
       "id": "nsw-svtm",
       "role": "native-vegetation source candidate",
-      "url": "https://mapprod3.environment.nsw.gov.au/arcgis/services/VIS/SVTM_NSW_Extant_PCT/MapServer/WMSServer",
-      "access": "WMS"
+      "url": "https://mapprod3.environment.nsw.gov.au/arcgis/rest/services/VIS/SVTM_NSW_Extant_PCT/MapServer",
+      "display_url": "https://mapprod3.environment.nsw.gov.au/arcgis/services/VIS/SVTM_NSW_Extant_PCT/MapServer/WMSServer",
+      "access": "ArcGIS REST",
+      "service_crs_epsg": 3308,
+      "expected_layers": [
+        {"id": 3, "name": "Plant Community Type with labels", "geometry_type": "esriGeometryPolygon"}
+      ],
+      "acquisition_layers": [
+        {"layer_id": 3, "component": "native_vegetation", "geometry_type": "esriGeometryPolygon", "page_size": 1000, "out_fields": ["OBJECTID", "PCTID", "PCTName", "vegClass", "vegForm", "form_PCT", "Shape_Area"]}
+      ]
     },
     {
       "id": "nsw-hydrography",

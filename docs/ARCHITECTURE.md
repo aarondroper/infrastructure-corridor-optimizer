@@ -95,14 +95,19 @@ and select the configured ELVIS/NSW primary or Copernicus GLO-30 fallback with
 provenance. Actual portal acquisition, raster-pixel reading, and reprojection remain
 future work; the selected source policy does not claim those operations are complete.
 `scripts/acquire_vector_sources.py` now provides bounded, object-ID-paginated ArcGIS
-acquisition for the NPWS, hydrography, road, and railway layers, requesting EPSG:7856
+acquisition for the NPWS, SVTM native-vegetation, hydrography, road, and railway layers, requesting EPSG:7856
 output and rejecting incomplete pages. Its CLI streams validated pages to staged
 external per-layer ArcGIS JSON feature collections and publishes a compact manifest
 only after the selected capture completes; the module also retains an in-memory API
 for small deterministic tests. The configured road layer uses a 150-ID page size
 because the live transport service rejected the 200-ID default, while the global
 default remains 200. It does not clip, repair, rasterize, or derive cost surfaces.
-Terrain raster and SVTM WMS acquisition remain future work.
+Terrain raster acquisition remains future work; the SVTM WMS resource is retained for
+display rather than analytical capture.
+The SVTM ArcGIS feature-layer resource is configured for native-vegetation capture;
+its WMS resource remains available for display. The configured S1 envelope contains
+approximately 216,808 intersecting polygons, so full materialization remains an
+external operational task and is not treated as verified output.
 `ico_model.precomputed_routes` and `scripts/generate_precomputed_routes.py` provide
 the offline grid-to-route execution boundary: they validate a seven-component
 normalized-grid bundle, apply each approved preset, run deterministic A*, and publish

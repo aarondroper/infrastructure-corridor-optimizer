@@ -30,7 +30,7 @@ are:
 - `scripts/generate_precomputed_routes.py`: static route-asset generation CLI for a validated normalized-grid bundle;
 - `config/model.json`: S1 endpoints, seven sensitivity components, normalization, and approved sensitivity presets;
 - `pyproject.toml`: minimal dependency-free Python package metadata;
-- `tests/`: forty-eight standard-library unit tests covering cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, terrain selection, and precomputed route assets;
+- `tests/`: fifty standard-library unit tests covering cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, terrain selection, and precomputed route assets;
 - `benchmarks/benchmark_routing.py` and `benchmarks/results.json`: reproducible proxy benchmark;
 - `docs/ANALYTICAL_MODEL.md`: model semantics, evidence, and current execution boundary.
 
@@ -123,10 +123,11 @@ are not implemented.
 Feasibility research has been performed against official source catalogues/services
 and representative live endpoints. The following inputs remain unresolved:
 
-- full external capture of the hydrography-line layer, plus terrain and native-
-  vegetation acquisition; the road and hydrography-area captures are verified
-  externally. The bounded vector adapter, staged streaming writer, and source-specific
-  page-size policy are implemented while raw captures remain outside version control;
+- full external capture of the hydrography-line layer and the approximately 216,808-
+  feature native-vegetation layer, plus terrain acquisition; the road and
+  hydrography-area captures are verified externally. The bounded vector adapter,
+  staged streaming writer, and source-specific page-size policy are implemented
+  while raw captures remain outside version control;
 - actual ELVIS/NSW DEM acquisition and local artifact availability; Copernicus GLO-30
   is the approved fallback if the primary artifact is unavailable or invalid;
 - normalization details;
@@ -146,10 +147,10 @@ No hosting provider is selected as a confirmed implementation decision.
 
 Verified on 13 September 2026:
 
-- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 48 tests passed;
+- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 50 tests passed;
 - `PYTHONPATH=src python3 benchmarks/benchmark_routing.py --sizes 128 256 512` — completed and retained in `benchmarks/results.json`;
 - `PYTHONPATH=src python3 scripts/acquire_sources.py --output <temporary manifest> --timeout 20` — live GA endpoint acquisition succeeded; the manifest was written outside the repository;
-- `PYTHONPATH=src python3 scripts/probe_sources.py --output <temporary report> --timeout 20` — live probe validated GA, NPWS, hydrography, and transport; deferred SVTM WMS and reported the NSW elevation no-raster limitation;
+- `PYTHONPATH=src python3 scripts/probe_sources.py --output <temporary report> --timeout 20` — live probe validated GA, NPWS, SVTM, hydrography, and transport, and reported the configured terrain services as deferred/no-raster;
 - `PYTHONPATH=src python3 scripts/acquire_vector_sources.py --source-id nsw-npws-estate --output-dir <temporary directory> --timeout 30` — staged and published 20 NPWS polygon features in one complete page;
 - `PYTHONPATH=src python3 scripts/acquire_vector_sources.py --source-id nsw-transport --component roads --output-dir <temporary directory> --timeout 30` — staged and published 46,092 road features in 308 complete pages using the configured 150-ID page size; the artifact was 34.4 MB in `/tmp` and matched its manifest count;
 - `PYTHONPATH=src python3 scripts/acquire_vector_sources.py --source-id nsw-hydrography --component hydrography_area --output-dir <temporary directory> --timeout 30` — staged and published 12,652 hydrography-area features in 64 complete pages; the 15.8 MB artifact matched its manifest count and used EPSG:7856;
@@ -161,6 +162,8 @@ Verified on 13 September 2026:
 - the benchmark produced equal A*/Dijkstra path costs and fewer explored cells for A* at all three sizes;
 - JSON configuration and benchmark output parse successfully through the Python standard library.
 - `PYTHONPATH=src:. python3 scripts/generate_precomputed_routes.py --grid-bundle <temporary bundle> --output-dir <temporary directory>` — generated shortest, balanced, and environmental route assets and a manifest from a deterministic normalized-grid fixture.
+- `PYTHONPATH=src python3 scripts/probe_sources.py --output /tmp/ico-source-probe-svtm.json --timeout 30` — live topology probe validated the configured SVTM ArcGIS feature service and layer metadata at EPSG:3308; no full SVTM artifact was published.
+- a live SVTM count query within the configured S1 envelope returned 216,808 intersecting polygon features; complete high-volume materialization remains unverified.
 
 No linting, type-check, frontend build, full geographic data-validation, or deployment
 verification exists yet. Git status and diff checks are available and are run before
@@ -184,10 +187,12 @@ and the decision log; the selector does not silently substitute an unconfigured 
 Priority 3 is active. The terrain source policy, local artifact contract, bounded
 ArcGIS vector acquisition boundary, staged streaming publication path, external road
 and hydrography-area captures, artifact-integrity gate, and source-preserving vector
-schema normalization are verified. Hydrography-line capture remains unmaterialized
+schema normalization are verified. The approved SVTM feature layer is configured and
+topology-validated but remains unmaterialized because its S1 envelope is large and
+full capture has not completed; hydrography-line capture is also unmaterialized
 because the public service stalled during a full capture attempt. The next connected
 work is DEM/raster-vector derivation and aligned grid construction around the
 validated inputs, followed by route assessment and the three geographic offline
-routes. The route-asset execution boundary is now implemented and tested, but no
+routes. The route-asset execution boundary is implemented and tested, but no
 geographic route is claimed. No frontend implementation should precede those data
 and model checks.

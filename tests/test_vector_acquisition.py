@@ -28,6 +28,18 @@ class FakeVectorClient:
                 "geometryType": "esriGeometryPolygon",
                 "spatialReference": {"wkid": 4283},
             }
+        if "svtm" in url.lower():
+            return {
+                "spatialReference": {"wkid": 3308},
+                "layers": [
+                    {
+                        "id": 3,
+                        "name": "Plant Community Type with labels",
+                        "type": "Feature Layer",
+                        "geometryType": "esriGeometryPolygon",
+                    }
+                ],
+            }
         if "Hydrography" in url:
             layer_id_text = url.rstrip("/").rsplit("/", 1)[-1]
             if layer_id_text.isdigit():
@@ -67,7 +79,11 @@ class FakeVectorClient:
 
     def query_feature_payload(self, url, **query):
         self.queries.append((url, query))
-        is_polygon = url.endswith("/0") or url.endswith("/10")
+        is_polygon = (
+            url.endswith("/0")
+            or url.endswith("/10")
+            or ("svtm" in url.lower() and url.endswith("/3"))
+        )
         geometry = {"rings": [[[1, 2], [3, 4], [5, 6], [1, 2]]]} if is_polygon else {
             "paths": [[[1, 2], [3, 4]]]
         }
@@ -83,9 +99,9 @@ class VectorAcquisitionTests(unittest.TestCase):
         config = load_config()
         client = FakeVectorClient()
         bundle = acquire(config, client)
-        self.assertEqual(len(bundle["sources"]), 3)
-        self.assertEqual(len(client.id_queries), 7)
-        self.assertEqual(len(client.queries), 7)
+        self.assertEqual(len(bundle["sources"]), 4)
+        self.assertEqual(len(client.id_queries), 8)
+        self.assertEqual(len(client.queries), 8)
         for _, query in client.id_queries:
             self.assertEqual(query["in_crs_epsg"], 7844)
             self.assertEqual(query["geometry"], {"xmin": 150.82, "ymin": -33.15, "xmax": 151.62, "ymax": -32.27})
@@ -106,7 +122,7 @@ class VectorAcquisitionTests(unittest.TestCase):
                 for source in manifest["sources"]
                 for layer in source["layers"]
             ]
-            self.assertEqual(len(layer_records), 7)
+            self.assertEqual(len(layer_records), 8)
             self.assertTrue(all(record["feature_count"] == 1 for record in layer_records))
             self.assertTrue(all(Path(record["artifact_path"]).is_file() for record in layer_records))
 
@@ -130,6 +146,35 @@ class VectorAcquisitionTests(unittest.TestCase):
         bundle = acquire(config, client, components={"roads"})
         layer = bundle["sources"][0]["layers"][0]
         self.assertEqual(layer["query"]["page_size"], 150)
+
+    def test_queryable_native_vegetation_layer_is_acquired_when_configured(self):
+        config = load_config()
+        config["sources"].append(
+            {
+                "id": "nsw-svtm",
+                "url": "https://example.test/svtm/MapServer",
+                "service_crs_epsg": 3308,
+                "expected_layers": [
+                    {"id": 3, "name": "Plant Community Type with labels", "geometry_type": "esriGeometryPolygon"}
+                ],
+                "acquisition_layers": [
+                    {
+                        "layer_id": 3,
+                        "component": "native_vegetation",
+                        "geometry_type": "esriGeometryPolygon",
+                        "page_size": 1000,
+                        "out_fields": ["OBJECTID", "PCTID", "PCTName"],
+                    }
+                ],
+            }
+        )
+        client = FakeVectorClient()
+        bundle = acquire(config, client, source_ids={"nsw-svtm"})
+        self.assertEqual(bundle["sources"][0]["source_id"], "nsw-svtm")
+        layer = bundle["sources"][0]["layers"][0]
+        self.assertEqual(layer["component"], "native_vegetation")
+        self.assertEqual(layer["source_crs_epsg"], 3308)
+        self.assertEqual(layer["query"]["page_size"], 1000)
 
     def test_streaming_writer_publishes_only_after_layer_validation(self):
         config = load_config()
@@ -169,9 +214,9 @@ class VectorAcquisitionTests(unittest.TestCase):
                 expected_scenario=config["scenario"],
                 expected_output_crs_epsg=config["analysis_crs_epsg"],
             )
-            self.assertEqual(report["source_count"], 3)
-            self.assertEqual(report["layer_count"], 7)
-            self.assertEqual(report["feature_count"], 7)
+            self.assertEqual(report["source_count"], 4)
+            self.assertEqual(report["layer_count"], 8)
+            self.assertEqual(report["feature_count"], 8)
 
     def test_artifact_validator_rejects_manifest_count_mismatch(self):
         config = load_config()
