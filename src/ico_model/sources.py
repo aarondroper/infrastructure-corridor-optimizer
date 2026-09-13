@@ -142,13 +142,92 @@ def _feature_properties(feature: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def validate_service_crs(metadata: Mapping[str, Any], expected_epsg: int) -> None:
-    spatial_reference = metadata.get("spatialReference")
+    spatial_reference = metadata.get("spatialReference", metadata.get("sourceSpatialReference"))
     if not isinstance(spatial_reference, Mapping):
         raise SourceValidationError("source service has no spatial reference metadata")
     observed = spatial_reference.get("latestWkid", spatial_reference.get("wkid"))
     if observed != expected_epsg:
         raise SourceValidationError(
             f"source CRS mismatch: expected EPSG:{expected_epsg}, observed {observed!r}"
+        )
+
+
+def summarize_arcgis_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
+    """Extract stable topology/CRS/extent facts from an ArcGIS service response."""
+
+    spatial_reference = metadata.get("spatialReference", metadata.get("sourceSpatialReference"))
+    if not isinstance(spatial_reference, Mapping):
+        raise SourceValidationError("ArcGIS metadata has no spatial reference")
+    observed_epsg = spatial_reference.get("latestWkid", spatial_reference.get("wkid"))
+    layers = metadata.get("layers")
+    if isinstance(layers, list):
+        layer_summary = [
+            {
+                key: layer[key]
+                for key in ("id", "name", "type", "geometryType", "parentLayerId")
+                if key in layer
+            }
+            for layer in layers
+            if isinstance(layer, Mapping)
+        ]
+    elif "id" in metadata and "name" in metadata:
+        layer_summary = [
+            {
+                key: metadata[key]
+                for key in ("id", "name", "type", "geometryType")
+                if key in metadata
+            }
+        ]
+    else:
+        layer_summary = []
+    extent = metadata.get("fullExtent", metadata.get("extent"))
+    return {
+        "current_version": metadata.get("currentVersion"),
+        "service_description": metadata.get("serviceDescription", metadata.get("description", "")),
+        "crs_epsg": observed_epsg,
+        "full_extent": extent,
+        "layers": layer_summary,
+    }
+
+
+def validate_expected_layers(
+    metadata_summary: Mapping[str, Any], expected_layers: Sequence[Mapping[str, Any]]
+) -> None:
+    """Require configured source layer IDs/names/types to exist in metadata."""
+
+    available = {layer.get("id"): layer for layer in metadata_summary.get("layers", [])}
+    for expected in expected_layers:
+        layer = available.get(expected.get("id"))
+        if layer is None or layer.get("name") != expected.get("name"):
+            raise SourceValidationError(
+                f"expected ArcGIS layer is unavailable or renamed: {expected}"
+            )
+        expected_geometry = expected.get("geometry_type")
+        if expected_geometry and layer.get("geometryType") != expected_geometry:
+            raise SourceValidationError(
+                f"ArcGIS layer geometry mismatch for {expected['name']!r}: "
+                f"expected {expected_geometry!r}, observed {layer.get('geometryType')!r}"
+            )
+
+
+def validate_expected_layer_names(
+    metadata_summary: Mapping[str, Any], expected_names: Sequence[str]
+) -> None:
+    """Require configured layer names to be present in an ArcGIS metadata summary."""
+
+    available_names = {layer.get("name") for layer in metadata_summary.get("layers", [])}
+    missing = sorted(set(expected_names) - available_names)
+    if missing:
+        raise SourceValidationError(f"expected ArcGIS layers are unavailable or renamed: {missing}")
+
+
+def validate_required_layer_type(metadata_summary: Mapping[str, Any], expected_type: str) -> None:
+    """Require at least one layer of a configured ArcGIS type."""
+
+    if not any(layer.get("type") == expected_type for layer in metadata_summary.get("layers", [])):
+        observed = sorted({layer.get("type") for layer in metadata_summary.get("layers", [])})
+        raise SourceValidationError(
+            f"required ArcGIS layer type {expected_type!r} is unavailable; observed {observed}"
         )
 
 

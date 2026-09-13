@@ -11,7 +11,11 @@ from ico_model.sources import (
     SourceValidationError,
     build_endpoint_manifest,
     validate_endpoint_features,
+    summarize_arcgis_metadata,
     validate_service_crs,
+    validate_expected_layers,
+    validate_expected_layer_names,
+    validate_required_layer_type,
     write_manifest,
 )
 
@@ -126,6 +130,24 @@ class SourceTests(unittest.TestCase):
             written = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(written["source"]["crs_epsg"], 7844)
         self.assertEqual([item["name"] for item in written["endpoints"]], ["Bayswater", "Eraring"])
+
+    def test_arcgis_metadata_summary_and_layer_guards(self):
+        summary = summarize_arcgis_metadata(
+            {
+                "currentVersion": 10.9,
+                "spatialReference": {"latestWkid": 7844},
+                "fullExtent": {"xmin": 1, "ymin": 2, "xmax": 3, "ymax": 4},
+                "layers": [
+                    {"id": 5, "name": "RoadSegment", "type": "Feature Layer", "geometryType": "esriGeometryPolyline"}
+                ],
+            }
+        )
+        self.assertEqual(summary["crs_epsg"], 7844)
+        self.assertEqual(summary["full_extent"]["xmax"], 3)
+        validate_expected_layers(summary, [{"id": 5, "name": "RoadSegment", "geometry_type": "esriGeometryPolyline"}])
+        validate_expected_layer_names(summary, ["RoadSegment"])
+        with self.assertRaises(SourceValidationError):
+            validate_required_layer_type(summary, "Raster Layer")
 
 
 if __name__ == "__main__":

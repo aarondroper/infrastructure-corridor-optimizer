@@ -19,9 +19,10 @@ are:
 - `src/ico_model/routing.py`: deterministic eight-neighbor A* and Dijkstra routing;
 - `src/ico_model/sources.py`: bounded ArcGIS REST access and endpoint validation;
 - `scripts/acquire_sources.py`: live endpoint acquisition and provenance manifest CLI;
+- `scripts/probe_sources.py`: ArcGIS source topology/CRS/extent probe;
 - `config/model.json`: S1 endpoints, seven sensitivity components, normalization, and approved sensitivity presets;
 - `pyproject.toml`: minimal dependency-free Python package metadata;
-- `tests/`: nineteen standard-library unit tests covering cost, configuration, routing, and source acquisition behavior;
+- `tests/`: twenty standard-library unit tests covering cost, configuration, routing, and source acquisition behavior;
 - `benchmarks/benchmark_routing.py` and `benchmarks/results.json`: reproducible proxy benchmark;
 - `docs/ANALYTICAL_MODEL.md`: model semantics, evidence, and current execution boundary.
 
@@ -96,9 +97,9 @@ These are preserved in `docs/DECISIONS.md` and do not establish that correspondi
 
 Priority 2 is complete. Priority 3 is active: the transparent model schema, tested
 grid operations, approved sensitivity configuration, synthetic benchmark, A* selection,
-offline precomputed MVP boundary, and fixed-endpoint acquisition slice are verified.
-Full source acquisition, raster/vector derivation, route assessment, and application
-assets are not implemented.
+offline precomputed MVP boundary, fixed-endpoint acquisition slice, and source-topology
+probe are verified. Full source acquisition, raster/vector derivation, route assessment,
+and application assets are not implemented.
 
 ## Open Inputs / Limitations
 
@@ -106,6 +107,7 @@ Feasibility research has been performed against official source catalogues/servi
 and representative live endpoints. The following inputs remain unresolved:
 
 - acquisition adapters and tile/feature coverage validation for terrain, protected land, native vegetation, hydrography, roads, and railways;
+- definitive terrain DEM source and acquisition path; the current NSW elevation service has no raster layer;
 - normalization details;
 - routing grid resolution;
 - geographic source coverage and data-quality validation;
@@ -123,9 +125,10 @@ No hosting provider is selected as a confirmed implementation decision.
 
 Verified on 13 September 2026:
 
-- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 19 tests passed;
+- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 20 tests passed;
 - `PYTHONPATH=src python3 benchmarks/benchmark_routing.py --sizes 128 256 512` — completed and retained in `benchmarks/results.json`;
 - `PYTHONPATH=src python3 scripts/acquire_sources.py --output <temporary manifest> --timeout 20` — live GA endpoint acquisition succeeded; the manifest was written outside the repository;
+- `PYTHONPATH=src python3 scripts/probe_sources.py --output <temporary report> --timeout 20` — live probe validated GA, NPWS, hydrography, and transport; deferred SVTM WMS and reported the NSW elevation no-raster limitation;
 - the benchmark produced equal A*/Dijkstra path costs and fewer explored cells for A* at all three sizes;
 - JSON configuration and benchmark output parse successfully through the Python standard library.
 
@@ -141,12 +144,12 @@ presets, and offline precomputed routes for the static MVP. Future changes to th
 study envelope, constraint philosophy, preset assumptions, or interactive weighting
 scope must be reviewed if they materially change the product.
 
-No new owner decision is required for the current endpoint-acquisition implementation
-slice.
+The current source-topology evidence creates one owner-level decision: select the
+terrain DEM acquisition source/path. The probe does not silently substitute one.
 
 ## Current Development Frontier
 
-Priority 3 is active. The next connected work is to add bounded acquisition and
-coverage-validation adapters for the approved constraint sources, then derive aligned
-geographic grids and generate the three offline routes. No frontend implementation
-should precede those data and model checks.
+Priority 3 is active. The next connected work is to resolve the terrain DEM source,
+then implement bounded acquisition and coverage-validation adapters for the approved
+constraint sources, derive aligned geographic grids, and generate the three offline
+routes. No frontend implementation should precede those data and model checks.

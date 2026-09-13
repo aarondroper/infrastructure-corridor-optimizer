@@ -6,3 +6,4 @@ venv/
 data/raw/
 data/derived/
 data/source_manifest.json
+data/source_probe.json

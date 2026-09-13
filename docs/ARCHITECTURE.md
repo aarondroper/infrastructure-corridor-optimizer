@@ -82,10 +82,12 @@ Responsibilities:
 - avoid embedding unnecessary manual preprocessing steps.
 
 The implemented `ico_model.sources` module currently covers bounded ArcGIS REST JSON
-requests, service CRS validation, and fixed endpoint identity validation. The CLI in
-`scripts/acquire_sources.py` writes a small provenance manifest. Acquisition adapters
-for the terrain, environmental, hydrography, road, and railway layers remain future
-work.
+requests, service CRS validation, endpoint identity validation, and ArcGIS metadata
+topology guards. The CLIs in `scripts/acquire_sources.py` and
+`scripts/probe_sources.py` write small provenance and source-topology reports.
+Acquisition adapters for the terrain, environmental, hydrography, road, and railway
+layers remain future work; the current elevation candidate does not expose a raster
+DEM and requires a reviewed source choice.
 
 ### 2. Study-area preparation
 

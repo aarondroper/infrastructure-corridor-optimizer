@@ -24,13 +24,16 @@
       "id": "nsw-elevation",
       "role": "terrain source candidate",
       "url": "https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Elevation_and_Depth_Theme_multiCRS/FeatureServer",
-      "access": "ArcGIS REST"
+      "access": "ArcGIS REST",
+      "expected_layer_names": ["SpotHeight", "RelativeHeight", "Contour"],
+      "required_layer_type": "Raster Layer"
     },
     {
       "id": "nsw-npws-estate",
       "role": "protected-land source candidate",
       "url": "https://mapprod3.environment.nsw.gov.au/arcgis/rest/services/EDP/Estate/MapServer/0",
-      "access": "ArcGIS REST"
+      "access": "ArcGIS REST",
+      "expected_layer": {"id": 0, "name": "NPWS Estate", "geometry_type": "esriGeometryPolygon"}
     },
     {
       "id": "nsw-svtm",
@@ -42,13 +45,22 @@
       "id": "nsw-hydrography",
       "role": "hydrography source candidate",
       "url": "https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Hydrography/MapServer",
-      "access": "ArcGIS REST"
+      "access": "ArcGIS REST",
+      "expected_layers": [
+        {"id": 3, "name": "Hydroline"},
+        {"id": 4, "name": "Named Watercourse"},
+        {"id": 10, "name": "HydroArea"}
+      ]
     },
     {
       "id": "nsw-transport",
       "role": "road and railway source candidate",
       "url": "https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Transport_Theme_multiCRS/FeatureServer",
-      "access": "ArcGIS REST"
+      "access": "ArcGIS REST",
+      "expected_layers": [
+        {"id": 5, "name": "RoadSegment", "geometry_type": "esriGeometryPolyline"},
+        {"id": 7, "name": "Railway", "geometry_type": "esriGeometryPolyline"}
+      ]
     }
   ],
   "candidate_grid_resolutions_m": [50, 100, 150],
