@@ -66,6 +66,17 @@ schema. They remain planning assumptions rather than objective or engineering tr
 and should be recalibrated only if geographic validation shows that the resulting
 trade-offs are not meaningful.
 
+### Terrain source policy
+
+The approved terrain order is ELVIS/NSW DEM first, followed by a dated Copernicus DEM
+GLO-30 artifact when the primary is unavailable or fails validation. The terrain
+selection boundary requires a local raster artifact sidecar to declare its source ID,
+artifact CRS, processing-envelope CRS, resolution, complete bounds coverage, nodata
+metadata, and acquisition timestamp. `src/ico_model/terrain.py` records which source
+was selected and why. This is a provenance and input-integrity boundary only: the
+repository does not yet download DEM tiles, read GeoTIFF pixels, reproject rasters, or
+derive slope.
+
 ## Routing core
 
 `src/ico_model/routing.py` provides deterministic eight-neighbor least-cost routing
@@ -102,7 +113,8 @@ not be inferred solely from the composite score.
 ## Implementation boundary
 
 The current Python core intentionally has no GIS dependency. It validates normalized
-rectangular grids, combines layers, and routes them. Priority 3 now has a standard-
-library ArcGIS acquisition boundary for the fixed GA endpoint records; it still needs
-source adapters/coverage checks for the remaining components, clipping/reprojection,
-raster/vector derivation, route assessment, and generated web assets.
+rectangular grids, combines layers, and routes them. Priority 3 now has standard-
+library acquisition boundaries for the fixed GA endpoint records and terrain artifact
+selection; it still needs source adapters/coverage checks for the remaining components,
+DEM acquisition/pixel processing, clipping/reprojection, raster/vector derivation,
+route assessment, and generated web assets.

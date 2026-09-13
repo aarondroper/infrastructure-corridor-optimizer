@@ -19,6 +19,7 @@ acquisition checks in addition to repository inventory and consistency checks:
 - `rg -n` searches for stale implementation claims, unsupported completion claims, and broken document references;
 - `PYTHONPATH=src python3 -m unittest discover -s tests -v` for the current analytical core;
 - `PYTHONPATH=src python3 scripts/acquire_sources.py --output <temporary manifest>` for live endpoint validation when network access is available;
+- `PYTHONPATH=src python3 scripts/select_terrain_source.py --primary-metadata <sidecar> [--fallback-metadata <sidecar>] --output <temporary report>` for local DEM artifact provenance and ordered fallback validation;
 - `PYTHONPATH=src python3 benchmarks/benchmark_routing.py --sizes 128 256 512` for the current routing proxy benchmark;
 - direct review of all changed Markdown files;
 - `git status --short --branch`, `git diff --check`, and the relevant diff when a usable Git repository exists.

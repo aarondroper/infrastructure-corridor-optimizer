@@ -5,8 +5,9 @@
 **Research date:** 13 September 2026
 
 **Decision status:** Owner selections recorded: S1, existing public Bayswater/Eraring
-endpoint records, and penalties for environmental/crossing factors. Exact preset
-weights and the runtime interaction model remain draft.
+endpoint records, penalties for environmental/crossing factors, the approved
+sensitivity presets, offline precomputed routes, and ELVIS/NSW DEM as primary terrain
+source with Copernicus DEM GLO-30 as explicit fallback.
 
 ## Conclusion
 
@@ -59,7 +60,7 @@ and it does not establish legal feasibility.
 | --- | --- | --- | --- |
 | Energy endpoints and existing network context | [Geoscience Australia Electricity Infrastructure](https://pid.geoscience.gov.au/dataset/ga/151179), [MapServer](https://services.ga.gov.au/gis/rest/services/Electricity_Infrastructure/MapServer), and [WFS](https://services.ga.gov.au/gis/services/Electricity_Infrastructure/MapServer/WFSServer) | Current service exposes substations, major power stations, and power lines in GDA2020 (EPSG:7844). The live schema includes feature name, status, voltage, locality, state, source dates, confidence, latitude, and longitude. | **Recommended.** Public, machine-readable, nationwide, and suitable for reproducible candidate discovery. Record the 2026 service version and source dates. The live service returned HTTP 200 for metadata and WFS capabilities when queried with a normal client user-agent; filtered feature queries still need to be implemented and tested in the pipeline. |
 | Study context | [EnergyCo Hunter-Central Coast REZ project](https://www.energyco.nsw.gov.au/our-projects/hunter-central-coast-rez/network-infrastructure-project) and [Hunter Transmission Project corridor-selection page](https://energyco.nsw.gov.au/our-projects/hunter-transmission-project/corridor-selection) | EnergyCo provides a public Hunter context, a GIS boundary download for the HCC REZ, and a current description of the Hunter Transmission Project corridor and its planning trade-offs. | **Recommended as context only.** Useful for scenario framing and map annotation, not as a hard constraint or validation target. GIS ZIP link is public but returned HTTP 202 in the workspace probe, so acquisition handling must be confirmed before relying on it. |
-| Terrain / slope | [NSW Elevation and Depth Theme](https://www.nsw.gov.au/environment-land-and-water/spatial-data-and-mapping/foundation-spatial-data-framework/elevation-and-depth), [GDA2020 multi-CRS service](https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Elevation_and_Depth_Theme_multiCRS/FeatureServer), and [ELVIS access](https://elevation.fsdf.org.au/) | NSW describes bare-earth LiDAR DEMs at 1m/2m where available and photogrammetric DEM at 5m, with 2km x 2km on-demand tiles. The live multi-CRS FeatureServer reports GDA2020 but exposes only SpotHeight, RelativeHeight, and Contour feature layers; no raster DEM layer was present. | **Candidate blocked for direct DEM use.** Owner must choose an ELVIS/NSW DEM acquisition path or approve a dated 30m fallback such as [Copernicus DEM GLO-30](https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM). Do not substitute one silently. |
+| Terrain / slope | [ELVIS access](https://elevation.fsdf.org.au/), [NSW Elevation and Depth guidance](https://www.nsw.gov.au/environment-land-and-water/spatial-data-and-mapping/foundation-spatial-data-framework/elevation-and-depth), and [Copernicus DEM GLO-30](https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM) | ELVIS is the selected discovery/order path for Australian elevation products. The live NSW multi-CRS FeatureServer was also checked and exposes only SpotHeight, RelativeHeight, and Contour feature layers, not a raster DEM. Copernicus GLO-30 is the selected consistent lower-resolution fallback. | **Selected with explicit fallback.** `config/model.json` requires ELVIS/NSW first and Copernicus second. A local sidecar must identify source, artifact CRS, bounds CRS, resolution, complete coverage, nodata declaration, and acquisition date before selection. |
 | Protected / managed land | [NSW National Parks and Wildlife Service Estate](https://data.nsw.gov.au/data/dataset/nsw-national-parks-and-wildlife-service-npws-estate3f9e7) and [live REST layer](https://mapprod3.environment.nsw.gov.au/arcgis/rest/services/EDP/Estate/MapServer/0) | The layer covers NSW, is polygonal, exposes `NAME`, `TYPE`, `IUCN`, and related area/date fields, and is licensed CC BY. Live metadata reports EPSG:4283 and a full NSW extent. | **Selected as a penalty indicator.** Reproject to EPSG:7856 during processing. The owner did not approve a universal legal no-go rule; the dataset alone does not establish legal feasibility for this screening product. |
 | Native vegetation | [NSW State Vegetation Type Map (SVTM)](https://data.nsw.gov.au/data/dataset/nsw-state-vegetation-type-map) and its [REST/WMS resources](https://mapprod3.environment.nsw.gov.au/arcgis/services/VIS/SVTM_NSW_Extant_PCT/MapServer/WMSServer) | Current release is C2.0.M2.2 (December 2025). The map is regional-scale, covers current PCT/vegetation class/formation, is available as ESRI quickview and 5m GeoTIFF, and is CC BY. | **Recommended as a weighted environmental penalty.** It is suitable for explaining native-vegetation trade-offs, but regional mapping uncertainty and the distinction between mapped vegetation and legal clearing controls must remain explicit. |
 | Hydrography | [NSW Hydrography](https://data.nsw.gov.au/data/en/dataset/nsw-hydrography) and [ArcGIS REST service](https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Hydrography/MapServer) | Full-state service includes Hydroline, Named Watercourse, HydroArea, dams, lakes, swamps, and related features. Live metadata reports EPSG:3857 and the expected layers; the service supports JSON/GeoJSON queries. | **Recommended with reprojection and filtering.** Reproject to EPSG:7856 and use filtered watercourse/area requests. A broad feature query timed out in the workspace, so acquisition must fail clearly on incomplete responses. |
@@ -102,8 +103,8 @@ until source versioning and methodological roles are approved.
   not be called as unbounded state-wide extraction jobs. Responses, source dates,
   schema, CRS, and feature counts need validation before derived outputs are accepted.
 - **Terrain source capability:** the live NSW Elevation multi-CRS endpoint is a
-  feature service without a raster DEM layer. A definitive DEM source and acquisition
-  path are therefore not selected in the repository.
+  feature service without a raster DEM layer. ELVIS/NSW is therefore the selected
+  primary acquisition path, with Copernicus GLO-30 as an explicit dated fallback.
 - **Public project context:** EnergyCo's published corridor may change. It can help
   explain why the scenario matters, but it must not bias the optimizer or be presented
   as independent validation of a generated route.
@@ -120,4 +121,5 @@ The owner decisions that gated Priority 2 are resolved:
 Priority 2 has an explicit approved sensitivity model in `docs/ANALYTICAL_MODEL.md`
 and `config/model.json`. Final grid resolution, source coverage, and normalization
 calibration remain implementation-validation work. Interactive user weighting is
-deferred from the static MVP.
+deferred from the static MVP. Terrain source selection is approved; actual DEM
+acquisition and raster processing remain Priority 3 work.

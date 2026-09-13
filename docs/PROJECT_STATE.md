@@ -18,11 +18,13 @@ are:
 - `src/ico_model/cost.py`: normalization, weight validation, and weighted cost-layer combination;
 - `src/ico_model/routing.py`: deterministic eight-neighbor A* and Dijkstra routing;
 - `src/ico_model/sources.py`: bounded ArcGIS REST access and endpoint validation;
+- `src/ico_model/terrain.py`: local DEM sidecar validation and explicit primary/fallback selection;
 - `scripts/acquire_sources.py`: live endpoint acquisition and provenance manifest CLI;
 - `scripts/probe_sources.py`: ArcGIS source topology/CRS/extent probe;
+- `scripts/select_terrain_source.py`: DEM sidecar selection and provenance-report CLI;
 - `config/model.json`: S1 endpoints, seven sensitivity components, normalization, and approved sensitivity presets;
 - `pyproject.toml`: minimal dependency-free Python package metadata;
-- `tests/`: twenty standard-library unit tests covering cost, configuration, routing, and source acquisition behavior;
+- `tests/`: twenty-seven standard-library unit tests covering cost, configuration, routing, source acquisition, and terrain selection behavior;
 - `benchmarks/benchmark_routing.py` and `benchmarks/results.json`: reproducible proxy benchmark;
 - `docs/ANALYTICAL_MODEL.md`: model semantics, evidence, and current execution boundary.
 
@@ -34,8 +36,9 @@ There is still no verified evidence of:
 - CI, deployment configuration, or a live application.
 
 The feasibility record remains source evidence and scenario context. Source acquisition
-is implemented only for the fixed endpoint records, not yet for the full geographic
-constraint stack or route generation.
+is implemented only for the fixed endpoint records. Terrain source selection now has
+an explicit, tested local-artifact boundary, but no DEM has been acquired into this
+repository and no raster pixels have been processed.
 
 The hidden `.agents` and `.codex` directories are empty in the inspected workspace.
 There is no README yet; the source tree, executable benchmark, package manifest, and
@@ -107,7 +110,8 @@ Feasibility research has been performed against official source catalogues/servi
 and representative live endpoints. The following inputs remain unresolved:
 
 - acquisition adapters and tile/feature coverage validation for terrain, protected land, native vegetation, hydrography, roads, and railways;
-- definitive terrain DEM source and acquisition path; the current NSW elevation service has no raster layer;
+- actual ELVIS/NSW DEM acquisition and local artifact availability; Copernicus GLO-30
+  is the approved fallback if the primary artifact is unavailable or invalid;
 - normalization details;
 - routing grid resolution;
 - geographic source coverage and data-quality validation;
@@ -125,7 +129,7 @@ No hosting provider is selected as a confirmed implementation decision.
 
 Verified on 13 September 2026:
 
-- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 20 tests passed;
+- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 27 tests passed;
 - `PYTHONPATH=src python3 benchmarks/benchmark_routing.py --sizes 128 256 512` — completed and retained in `benchmarks/results.json`;
 - `PYTHONPATH=src python3 scripts/acquire_sources.py --output <temporary manifest> --timeout 20` — live GA endpoint acquisition succeeded; the manifest was written outside the repository;
 - `PYTHONPATH=src python3 scripts/probe_sources.py --output <temporary report> --timeout 20` — live probe validated GA, NPWS, hydrography, and transport; deferred SVTM WMS and reported the NSW elevation no-raster limitation;
@@ -144,12 +148,16 @@ presets, and offline precomputed routes for the static MVP. Future changes to th
 study envelope, constraint philosophy, preset assumptions, or interactive weighting
 scope must be reviewed if they materially change the product.
 
-The current source-topology evidence creates one owner-level decision: select the
-terrain DEM acquisition source/path. The probe does not silently substitute one.
+The terrain-source decision is resolved: use ELVIS/NSW DEM first and Copernicus DEM
+GLO-30 as the explicit fallback. Actual product selection, acquisition credentials
+or ordering, and any change to the approved source order remain subject to evidence
+and the decision log; the selector does not silently substitute an unconfigured source.
 
 ## Current Development Frontier
 
-Priority 3 is active. The next connected work is to resolve the terrain DEM source,
-then implement bounded acquisition and coverage-validation adapters for the approved
-constraint sources, derive aligned geographic grids, and generate the three offline
-routes. No frontend implementation should precede those data and model checks.
+Priority 3 is active. The terrain source policy and local artifact contract are
+verified, while actual DEM acquisition remains external/manual where required. The
+next connected work is bounded acquisition and coverage-validation adapters for the
+approved constraint sources, followed by DEM/raster-vector derivation, aligned grids,
+and the three offline routes. No frontend implementation should precede those data
+and model checks.

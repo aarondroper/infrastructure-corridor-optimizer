@@ -1,5 +1,5 @@
 {
-  "status": "p2-approved-sensitivity-presets",
+  "status": "p3-terrain-source-approved",
   "scenario": "S1",
   "study_context": "Upper Hunter to Lake Macquarie / Eraring-area corridor context",
   "source_snapshot_date": "2026-09-13",
@@ -21,12 +21,21 @@
       "access": "project web page"
     },
     {
-      "id": "nsw-elevation",
-      "role": "terrain source candidate",
-      "url": "https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Elevation_and_Depth_Theme_multiCRS/FeatureServer",
-      "access": "ArcGIS REST",
-      "expected_layer_names": ["SpotHeight", "RelativeHeight", "Contour"],
-      "required_layer_type": "Raster Layer"
+      "id": "elvis-nsw-dem",
+      "role": "terrain source primary",
+      "url": "https://elevation.fsdf.org.au/",
+      "access": "ELVIS portal order/download",
+      "product": "NSW DEM tiles, preferably 5 m or finer",
+      "provenance_required": true
+    },
+    {
+      "id": "copernicus-dem-glo-30",
+      "role": "terrain source fallback",
+      "url": "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM",
+      "access": "Copernicus Data Space",
+      "product": "Copernicus DEM GLO-30",
+      "resolution_m": 30,
+      "provenance_required": true
     },
     {
       "id": "nsw-npws-estate",
@@ -64,6 +73,20 @@
     }
   ],
   "candidate_grid_resolutions_m": [50, 100, 150],
+  "terrain_source_policy": {
+    "primary_source_id": "elvis-nsw-dem",
+    "fallback_source_id": "copernicus-dem-glo-30",
+    "allow_fallback": true,
+    "required_artifact_type": "raster-dem",
+    "processing_envelope_crs_epsg": 7844,
+    "target_analysis_crs_epsg": 7856,
+    "required_processing_envelope": {
+      "west": 150.82,
+      "south": -33.15,
+      "east": 151.62,
+      "north": -32.27
+    }
+  },
   "provisional_processing_envelope_gda2020": {
     "west": 150.82,
     "south": -33.15,
@@ -98,7 +121,7 @@
   },
   "components": [
     {"id": "length", "role": "base movement cost", "treatment": "ordinary cost"},
-    {"id": "terrain", "role": "DEM-derived slope difficulty", "treatment": "weighted penalty", "source_id": "nsw-elevation"},
+    {"id": "terrain", "role": "DEM-derived slope difficulty", "treatment": "weighted penalty", "source_id": "elvis-nsw-dem", "fallback_source_id": "copernicus-dem-glo-30"},
     {"id": "protected_land", "role": "NPWS Estate indicator", "treatment": "weighted penalty", "source_id": "nsw-npws-estate"},
     {"id": "native_vegetation", "role": "SVTM sensitivity indicator", "treatment": "weighted penalty", "source_id": "nsw-svtm"},
     {"id": "hydrography", "role": "watercourse / water-area crossing", "treatment": "weighted penalty", "source_id": "nsw-hydrography"},

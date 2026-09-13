@@ -231,3 +231,22 @@ router and its larger payload/validation surface.
 **Consequences:** The initial application will compare precomputed routes reliably on
 static hosting. Interactive weighting may be reconsidered only through a future
 owner-reviewed scope change backed by geographic and browser performance evidence.
+
+---
+
+## D020 — Use ELVIS/NSW DEM with a Copernicus GLO-30 Fallback
+
+**Decision:** Use ELVIS/NSW elevation data as the primary terrain source and a dated
+Copernicus DEM GLO-30 artifact as the explicit fallback for the S1 static MVP.
+
+**Rationale:** The current NSW Elevation multi-CRS FeatureServer exposes point and
+contour feature layers but no raster DEM. Geoscience Australia's ELVIS guidance
+provides the appropriate discovery/order path for Australian elevation products,
+while Copernicus GLO-30 provides a consistent lower-resolution fallback when the
+preferred product is unavailable or does not cover the processing envelope.
+
+**Consequences:** Configuration and provenance must identify the selected source and
+artifact date. The pipeline may select the fallback only after the primary fails the
+same local artifact checks for file availability, CRS metadata, resolution, complete
+coverage, and nodata declaration. The current implementation validates sidecars; it
+does not claim to download or process DEM pixels.

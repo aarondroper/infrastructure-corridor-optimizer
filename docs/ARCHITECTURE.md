@@ -85,9 +85,12 @@ The implemented `ico_model.sources` module currently covers bounded ArcGIS REST 
 requests, service CRS validation, endpoint identity validation, and ArcGIS metadata
 topology guards. The CLIs in `scripts/acquire_sources.py` and
 `scripts/probe_sources.py` write small provenance and source-topology reports.
+`ico_model.terrain` and `scripts/select_terrain_source.py` validate local DEM sidecars
+and select the configured ELVIS/NSW primary or Copernicus GLO-30 fallback with
+provenance. Actual portal acquisition, raster-pixel reading, and reprojection remain
+future work; the selected source policy does not claim those operations are complete.
 Acquisition adapters for the terrain, environmental, hydrography, road, and railway
-layers remain future work; the current elevation candidate does not expose a raster
-DEM and requires a reviewed source choice.
+layers remain future work.
 
 ### 2. Study-area preparation
 

@@ -79,7 +79,7 @@ Turn the approved study scenario and sources into a transparent, testable routin
 
 ## Priority 3 — Reproducible Data and Routing Pipeline
 
-**Status:** Next. This milestone will validate source coverage and turn the approved
+**Status:** Active. This milestone will validate source coverage and turn the approved
 model configuration into reproducible geographic cost surfaces and precomputed route
 assets.
 
@@ -90,6 +90,8 @@ Implement the full offline Python workflow from source acquisition through route
 ### Major Deliverables
 
 - reproducible acquisition of approved datasets;
+- terrain-source selection using ELVIS/NSW as primary and Copernicus GLO-30 as the
+  explicit fallback, with validated local artifact provenance;
 - minimal repository and developer-tooling bootstrap for the approved workflow, including dependency/configuration manifests and an executable test entry point;
 - study-area clipping and CRS/schema normalization;
 - derivation of approved constraint layers;

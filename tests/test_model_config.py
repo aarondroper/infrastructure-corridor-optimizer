@@ -33,6 +33,19 @@ class ModelConfigTests(unittest.TestCase):
             if "source_id" in component:
                 self.assertIn(component["source_id"], source_ids)
 
+    def test_terrain_policy_has_ordered_sources_and_explicit_crs(self):
+        config_path = Path(__file__).parents[1] / "config" / "model.json"
+        config = json.loads(config_path.read_text())
+        policy = config["terrain_source_policy"]
+        source_ids = {source["id"] for source in config["sources"]}
+        self.assertEqual(policy["primary_source_id"], "elvis-nsw-dem")
+        self.assertEqual(policy["fallback_source_id"], "copernicus-dem-glo-30")
+        self.assertIn(policy["primary_source_id"], source_ids)
+        self.assertIn(policy["fallback_source_id"], source_ids)
+        self.assertTrue(policy["allow_fallback"])
+        self.assertEqual(policy["processing_envelope_crs_epsg"], config["source_crs_epsg"])
+        self.assertEqual(policy["target_analysis_crs_epsg"], config["analysis_crs_epsg"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -11,6 +11,12 @@ from .sources import (
     validate_expected_layer_names,
     validate_required_layer_type,
 )
+from .terrain import (
+    TerrainArtifactError,
+    load_terrain_artifact_metadata,
+    select_terrain_artifact,
+    validate_terrain_artifact,
+)
 
 __all__ = [
     "NoPathError",
@@ -25,4 +31,8 @@ __all__ = [
     "validate_expected_layers",
     "validate_expected_layer_names",
     "validate_required_layer_type",
+    "TerrainArtifactError",
+    "load_terrain_artifact_metadata",
+    "select_terrain_artifact",
+    "validate_terrain_artifact",
 ]
