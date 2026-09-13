@@ -250,6 +250,23 @@ class VectorAcquisitionTests(unittest.TestCase):
             self.assertFalse(any(path.name.startswith(".staging-") for path in output_dir.iterdir()))
             self.assertEqual(manifest["sources"][0]["layers"][0]["feature_count"], 1)
 
+    def test_streamed_artifact_matches_final_manifest_for_independent_validation(self):
+        config = load_config()
+        client = FakeVectorClient()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest_path = stream_acquisition(
+                config, client, root / "acquired", {"nsw-npws-estate"}
+            )
+            report = validate_vector_manifest(
+                manifest_path,
+                expected_scenario=config["scenario"],
+                expected_output_crs_epsg=config["analysis_crs_epsg"],
+            )
+            layer = json.loads(manifest_path.read_text(encoding="utf-8"))["sources"][0]["layers"][0]
+            self.assertTrue(Path(layer["artifact_path"]).is_absolute())
+            self.assertEqual(report["feature_count"], layer["feature_count"])
+
     def test_streaming_writer_cleans_staging_after_validation_failure(self):
         config = load_config()
         client = FakeVectorClient()

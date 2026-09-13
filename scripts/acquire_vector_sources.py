@@ -568,6 +568,19 @@ def _artifact_name(source_id: str, component: str) -> str:
     return f"{source_id}--{component}.json"
 
 
+def _finalize_staged_artifact(path: Path, query: dict[str, Any]) -> None:
+    """Replace provisional query metadata after the streamed layer completes."""
+
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SourceValidationError(f"staged vector artifact is unreadable: {path}") from exc
+    if not isinstance(artifact, dict):
+        raise SourceValidationError(f"staged vector artifact is not an object: {path}")
+    artifact["query"] = query
+    write_manifest(artifact, path)
+
+
 def write_acquisition(bundle: dict[str, Any], output_dir: Path) -> Path:
     """Write per-layer feature collections and a compact acquisition manifest."""
 
@@ -595,7 +608,7 @@ def write_acquisition(bundle: dict[str, Any], output_dir: Path) -> Path:
                     for key, value in layer.items()
                     if key != "features"
                 }
-                | {"artifact_path": str(output_dir / filename)}
+                    | {"artifact_path": str((output_dir / filename).resolve())}
             )
         manifest["sources"].append(source_manifest)
     manifest_path = output_dir / "acquisition_manifest.json"
@@ -754,7 +767,9 @@ def stream_acquisition(
                         handle.close()
                     staged_path.unlink(missing_ok=True)
                     raise
-                final_path = output_dir / filename
+                _finalize_staged_artifact(staged_path, query)
+                page_complete()
+                final_path = (output_dir / filename).resolve()
                 source_manifest["layers"].append(
                     {
                         "component": layer["component"],
