@@ -25,6 +25,12 @@ from .vector_schema import (
     normalize_feature,
     normalize_feature_collection,
 )
+from .precomputed_routes import (
+    RouteAssetError,
+    generate_precomputed_routes,
+    load_grid_bundle,
+    write_precomputed_routes,
+)
 
 __all__ = [
     "NoPathError",
@@ -49,4 +55,8 @@ __all__ = [
     "COMPONENT_FIELD_ALIASES",
     "normalize_feature",
     "normalize_feature_collection",
+    "RouteAssetError",
+    "generate_precomputed_routes",
+    "load_grid_bundle",
+    "write_precomputed_routes",
 ]

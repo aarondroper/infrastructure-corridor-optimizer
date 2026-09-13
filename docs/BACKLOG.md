@@ -79,9 +79,9 @@ Turn the approved study scenario and sources into a transparent, testable routin
 
 ## Priority 3 — Reproducible Data and Routing Pipeline
 
-**Status:** Active. This milestone will validate source coverage and turn the approved
-model configuration into reproducible geographic cost surfaces and precomputed route
-assets.
+**Status:** Active. The normalized-grid-to-route asset boundary is implemented and
+tested. This milestone still needs source-complete geographic derivation and must
+feed validated geographic grids into that boundary.
 
 ### Objective
 
@@ -96,7 +96,7 @@ Implement the full offline Python workflow from source acquisition through route
 - study-area clipping and CRS/schema normalization;
 - derivation of approved constraint layers;
 - composite cost-surface generation;
-- least-cost routing for approved presets;
+- least-cost route assets for approved presets from validated geographic grids;
 - provenance/configuration metadata;
 - clear error handling for missing or invalid inputs;
 - automated tests for core analytical logic.

@@ -117,4 +117,7 @@ rectangular grids, combines layers, and routes them. Priority 3 now has standard
 library acquisition boundaries for fixed endpoints, selected terrain artifacts, and
 bounded ArcGIS vector layers; it still needs DEM acquisition/pixel processing,
 SVTM acquisition, clipping/reprojection validation, raster/vector derivation, route
-assessment, and generated web assets.
+assessment, and generated web assets. `ico_model.precomputed_routes` now applies the
+approved presets to a validated normalized-grid bundle and writes offline route-cell
+assets; these are not geographic routes until a GIS-backed grid stage supplies real
+cells and coordinates.

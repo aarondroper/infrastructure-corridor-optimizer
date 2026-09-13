@@ -20,15 +20,17 @@ are:
 - `src/ico_model/sources.py`: bounded ArcGIS REST access and endpoint validation;
 - `src/ico_model/vector_artifacts.py`: external vector-manifest and artifact integrity validation;
 - `src/ico_model/vector_schema.py`: source-preserving canonical schemas for the seven vector components;
+- `src/ico_model/precomputed_routes.py`: normalized-grid validation, approved-preset A* execution, and staged route-asset publication;
 - `src/ico_model/terrain.py`: local DEM sidecar validation and explicit primary/fallback selection;
 - `scripts/acquire_sources.py`: live endpoint acquisition and provenance manifest CLI;
 - `scripts/probe_sources.py`: ArcGIS source topology/CRS/extent probe;
 - `scripts/select_terrain_source.py`: DEM sidecar selection and provenance-report CLI;
 - `scripts/acquire_vector_sources.py`: bounded, paginated ArcGIS vector acquisition CLI;
 - `scripts/validate_vector_artifacts.py`: acquisition-manifest and per-layer artifact validation CLI;
+- `scripts/generate_precomputed_routes.py`: static route-asset generation CLI for a validated normalized-grid bundle;
 - `config/model.json`: S1 endpoints, seven sensitivity components, normalization, and approved sensitivity presets;
 - `pyproject.toml`: minimal dependency-free Python package metadata;
-- `tests/`: forty-three standard-library unit tests covering cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, and terrain selection behavior;
+- `tests/`: forty-eight standard-library unit tests covering cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, terrain selection, and precomputed route assets;
 - `benchmarks/benchmark_routing.py` and `benchmarks/results.json`: reproducible proxy benchmark;
 - `docs/ANALYTICAL_MODEL.md`: model semantics, evidence, and current execution boundary.
 
@@ -44,7 +46,10 @@ is implemented for fixed endpoints and bounded ArcGIS vector layers, with staged
 streaming output and live end-to-end captures verified for NPWS Estate, roads,
 hydrography area, and the railway layer into `/tmp` only. The resulting external
 manifests and artifacts can be checked by a separate dependency-free integrity gate
-and normalized into a source-preserving canonical feature schema.
+and normalized into a source-preserving canonical feature schema. A validated
+normalized-grid bundle can now be passed through the approved presets to produce
+provenance-rich route-cell assets; these are not geographic routes until a future
+GIS-backed grid stage supplies real cells and coordinates.
 Terrain source selection has an explicit, tested local-artifact boundary, but no DEM
 has been acquired into this repository and no raster pixels have been processed.
 
@@ -127,7 +132,7 @@ and representative live endpoints. The following inputs remain unresolved:
 - normalization details;
 - routing grid resolution;
 - geographic source coverage and data-quality validation;
-- implementation of offline route generation and route assessment;
+- geographic grid construction, offline route generation from those grids, and route assessment;
 - inclusion or exclusion of a flood constraint;
 - inclusion of DXF export.
 
@@ -141,7 +146,7 @@ No hosting provider is selected as a confirmed implementation decision.
 
 Verified on 13 September 2026:
 
-- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 43 tests passed;
+- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 48 tests passed;
 - `PYTHONPATH=src python3 benchmarks/benchmark_routing.py --sizes 128 256 512` — completed and retained in `benchmarks/results.json`;
 - `PYTHONPATH=src python3 scripts/acquire_sources.py --output <temporary manifest> --timeout 20` — live GA endpoint acquisition succeeded; the manifest was written outside the repository;
 - `PYTHONPATH=src python3 scripts/probe_sources.py --output <temporary report> --timeout 20` — live probe validated GA, NPWS, hydrography, and transport; deferred SVTM WMS and reported the NSW elevation no-raster limitation;
@@ -155,6 +160,7 @@ Verified on 13 September 2026:
 - the hydrography capture was attempted after resolving sparse child-layer metadata, but the public service stalled during a later page; interruption removed the staged output and no manifest was published;
 - the benchmark produced equal A*/Dijkstra path costs and fewer explored cells for A* at all three sizes;
 - JSON configuration and benchmark output parse successfully through the Python standard library.
+- `PYTHONPATH=src:. python3 scripts/generate_precomputed_routes.py --grid-bundle <temporary bundle> --output-dir <temporary directory>` — generated shortest, balanced, and environmental route assets and a manifest from a deterministic normalized-grid fixture.
 
 No linting, type-check, frontend build, full geographic data-validation, or deployment
 verification exists yet. Git status and diff checks are available and are run before
@@ -181,5 +187,7 @@ and hydrography-area captures, artifact-integrity gate, and source-preserving ve
 schema normalization are verified. Hydrography-line capture remains unmaterialized
 because the public service stalled during a full capture attempt. The next connected
 work is DEM/raster-vector derivation and aligned grid construction around the
-validated inputs, followed by route assessment and the three offline routes. No
-frontend implementation should precede those data and model checks.
+validated inputs, followed by route assessment and the three geographic offline
+routes. The route-asset execution boundary is now implemented and tested, but no
+geographic route is claimed. No frontend implementation should precede those data
+and model checks.

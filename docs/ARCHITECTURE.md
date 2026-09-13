@@ -103,6 +103,10 @@ for small deterministic tests. The configured road layer uses a 150-ID page size
 because the live transport service rejected the 200-ID default, while the global
 default remains 200. It does not clip, repair, rasterize, or derive cost surfaces.
 Terrain raster and SVTM WMS acquisition remain future work.
+`ico_model.precomputed_routes` and `scripts/generate_precomputed_routes.py` provide
+the offline grid-to-route execution boundary: they validate a seven-component
+normalized-grid bundle, apply each approved preset, run deterministic A*, and publish
+provenance-rich route-cell assets. They do not derive geographic grids or coordinates.
 
 ### 2. Study-area preparation
 
