@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
+import tempfile
 from datetime import datetime, timezone
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +45,9 @@ def _acquire_complete_layer(
     input_crs: int,
     output_crs: int,
     page_size: int,
+    on_begin: Callable[[dict[str, Any]], None] | None = None,
+    on_page: Callable[[list[dict[str, Any]]], None] | None = None,
+    on_end: Callable[[], None] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Fetch a bounded layer by IDs so transfer limits cannot truncate it."""
 
@@ -51,6 +57,20 @@ def _acquire_complete_layer(
         geometry=envelope,
         in_crs_epsg=input_crs,
     )
+    query = {
+        "where": "1=1",
+        "out_fields": layer.get("out_fields", ["*"]),
+        "geometry": envelope,
+        "geometry_type": "esriGeometryEnvelope",
+        "in_crs_epsg": input_crs,
+        "out_crs_epsg": output_crs,
+        "pagination": "objectIds",
+        "page_size": page_size,
+        "object_id_count": len(object_ids),
+        "page_count": (len(object_ids) + page_size - 1) // page_size,
+    }
+    if on_begin:
+        on_begin(query)
     features: list[dict[str, Any]] = []
     for offset in range(0, len(object_ids), page_size):
         page_ids = object_ids[offset : offset + page_size]
@@ -71,19 +91,13 @@ def _acquire_complete_layer(
         validate_feature_payload_crs(payload, output_crs, layer_url)
         page_features = payload["features"]
         validate_feature_geometries(page_features, layer["geometry_type"], layer_url)
-        features.extend(page_features)
-    return features, {
-        "where": "1=1",
-        "out_fields": layer.get("out_fields", ["*"]),
-        "geometry": envelope,
-        "geometry_type": "esriGeometryEnvelope",
-        "in_crs_epsg": input_crs,
-        "out_crs_epsg": output_crs,
-        "pagination": "objectIds",
-        "page_size": page_size,
-        "object_id_count": len(object_ids),
-        "page_count": (len(object_ids) + page_size - 1) // page_size,
-    }
+        if on_page:
+            on_page(page_features)
+        else:
+            features.extend(page_features)
+    if on_end:
+        on_end()
+    return features, query
 
 
 def acquire(
@@ -231,6 +245,167 @@ def write_acquisition(bundle: dict[str, Any], output_dir: Path) -> Path:
     return manifest_path
 
 
+def stream_acquisition(
+    config: dict[str, Any],
+    client: ArcGISClient,
+    output_dir: Path,
+    source_ids: set[str] | None = None,
+    components: set[str] | None = None,
+) -> Path:
+    """Acquire and publish layers incrementally through a staged output directory."""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if any(output_dir.iterdir()):
+        raise SourceValidationError(f"output directory must be empty: {output_dir}")
+    staging = Path(tempfile.mkdtemp(prefix=".staging-", dir=output_dir))
+    envelope = config["provisional_processing_envelope_gda2020"]
+    arcgis_envelope = {
+        "xmin": envelope["west"],
+        "ymin": envelope["south"],
+        "xmax": envelope["east"],
+        "ymax": envelope["north"],
+    }
+    input_crs = config["source_crs_epsg"]
+    output_crs = config["analysis_crs_epsg"]
+    page_size = int(config.get("arcgis_query_page_size", 200))
+    if page_size <= 0:
+        raise SourceValidationError("arcgis_query_page_size must be positive")
+    acquired_sources = []
+    try:
+        for source in config["sources"]:
+            if source_ids is not None and source["id"] not in source_ids:
+                continue
+            layers = source.get("acquisition_layers")
+            if not layers:
+                continue
+            service_metadata = client.service_metadata(source["url"])
+            service_crs = source.get("service_crs_epsg")
+            if service_crs is None:
+                raise SourceValidationError(f"source has no configured service CRS: {source['id']}")
+            validate_service_crs(service_metadata, service_crs)
+            summary = summarize_arcgis_metadata(service_metadata)
+            if source.get("expected_layers"):
+                validate_expected_layers(summary, source["expected_layers"])
+            if source.get("expected_layer"):
+                validate_expected_layers(summary, [source["expected_layer"]])
+            source_manifest = {
+                "source_id": source["id"],
+                "url": source["url"],
+                "service_crs_epsg": service_crs,
+                "layers": [],
+            }
+            for layer in layers:
+                if components is not None and layer["component"] not in components:
+                    continue
+                layer_id = layer["layer_id"]
+                layer_summary = next(
+                    (item for item in summary["layers"] if item.get("id") == layer_id), None
+                )
+                if layer_summary is None:
+                    raise SourceValidationError(
+                        f"configured acquisition layer is unavailable: {source['id']}:{layer_id}"
+                    )
+                if layer_summary.get("type") != "Feature Layer":
+                    raise SourceValidationError(
+                        f"configured acquisition layer is not queryable: {source['id']}:{layer_id}"
+                    )
+                if layer_summary.get("geometryType") != layer["geometry_type"]:
+                    raise SourceValidationError(
+                        f"configured acquisition geometry mismatch: {source['id']}:{layer_id}"
+                    )
+                layer_url = _layer_url(source["url"], layer_id)
+                filename = _artifact_name(source["id"], layer["component"])
+                staged_path = staging / filename
+                handle = None
+                first_feature = True
+                feature_count = 0
+
+                def begin(query, *, layer=layer, layer_summary=layer_summary, source=source):
+                    nonlocal handle
+                    header = {
+                        "schema_version": 1,
+                        "format": "arcgis-json-feature-collection",
+                        "source_id": source["id"],
+                        "source_url": source["url"],
+                        "component": layer["component"],
+                        "layer_id": layer["layer_id"],
+                        "layer_name": layer_summary.get("name"),
+                        "geometry_type": layer["geometry_type"],
+                        "source_crs_epsg": service_crs,
+                        "output_crs_epsg": output_crs,
+                        "processing_envelope": envelope,
+                        "query": query,
+                    }
+                    handle = staged_path.open("w", encoding="utf-8")
+                    handle.write(json.dumps(header, ensure_ascii=False)[:-1])
+                    handle.write(',"features":[\n')
+
+                def page(features):
+                    nonlocal first_feature, feature_count
+                    for feature in features:
+                        if not first_feature:
+                            handle.write(",\n")
+                        handle.write(json.dumps(feature, ensure_ascii=False))
+                        first_feature = False
+                        feature_count += 1
+
+                def end():
+                    handle.write("\n]}\n")
+                    handle.close()
+
+                try:
+                    _, query = _acquire_complete_layer(
+                        client,
+                        layer_url,
+                        layer,
+                        arcgis_envelope,
+                        input_crs,
+                        output_crs,
+                        page_size,
+                        on_begin=begin,
+                        on_page=page,
+                        on_end=end,
+                    )
+                except Exception:
+                    if handle is not None and not handle.closed:
+                        handle.close()
+                    staged_path.unlink(missing_ok=True)
+                    raise
+                final_path = output_dir / filename
+                source_manifest["layers"].append(
+                    {
+                        "component": layer["component"],
+                        "layer_id": layer_id,
+                        "layer_name": layer_summary.get("name"),
+                        "geometry_type": layer["geometry_type"],
+                        "source_crs_epsg": service_crs,
+                        "output_crs_epsg": output_crs,
+                        "processing_envelope": envelope,
+                        "query": query,
+                        "feature_count": feature_count,
+                        "artifact_path": str(final_path),
+                    }
+                )
+            if source_manifest["layers"]:
+                acquired_sources.append(source_manifest)
+        manifest = {
+            "schema_version": 1,
+            "format": "arcgis-json-feature-collections",
+            "acquired_at_utc": datetime.now(timezone.utc).isoformat(),
+            "scenario": config["scenario"],
+            "processing_envelope": envelope,
+            "processing_envelope_crs_epsg": input_crs,
+            "output_crs_epsg": output_crs,
+            "sources": acquired_sources,
+        }
+        write_manifest(manifest, staging / "acquisition_manifest.json")
+        for staged_file in staging.iterdir():
+            staged_file.replace(output_dir / staged_file.name)
+        return output_dir / "acquisition_manifest.json"
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=Path("config/model.json"))
@@ -239,13 +414,13 @@ def main() -> int:
     parser.add_argument("--component", action="append", help="limit acquisition to one or more configured components")
     parser.add_argument("--timeout", type=float, default=30.0)
     args = parser.parse_args()
-    bundle = acquire(
+    manifest_path = stream_acquisition(
         load_config(args.config),
         ArcGISClient(timeout_seconds=args.timeout),
+        args.output_dir,
         set(args.source_id) if args.source_id else None,
         set(args.component) if args.component else None,
     )
-    manifest_path = write_acquisition(bundle, args.output_dir)
     print(f"Wrote bounded vector acquisition manifest: {manifest_path}")
     return 0
 

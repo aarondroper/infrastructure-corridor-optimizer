@@ -3,7 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.acquire_vector_sources import acquire, write_acquisition
+from scripts.acquire_vector_sources import acquire, stream_acquisition, write_acquisition
+from ico_model.sources import SourceValidationError
 
 
 def load_config():
@@ -103,6 +104,34 @@ class VectorAcquisitionTests(unittest.TestCase):
         bundle = acquire(config, client, components={"railways"})
         self.assertEqual([source["source_id"] for source in bundle["sources"]], ["nsw-transport"])
         self.assertEqual([layer["component"] for layer in bundle["sources"][0]["layers"]], ["railways"])
+
+    def test_streaming_writer_publishes_only_after_layer_validation(self):
+        config = load_config()
+        client = FakeVectorClient()
+        with tempfile.TemporaryDirectory() as directory:
+            output_dir = Path(directory) / "acquired"
+            manifest_path = stream_acquisition(
+                config, client, output_dir, {"nsw-npws-estate"}
+            )
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            artifact = output_dir / "nsw-npws-estate--protected_land.json"
+            self.assertTrue(artifact.is_file())
+            self.assertFalse(any(path.name.startswith(".staging-") for path in output_dir.iterdir()))
+            self.assertEqual(manifest["sources"][0]["layers"][0]["feature_count"], 1)
+
+    def test_streaming_writer_cleans_staging_after_validation_failure(self):
+        config = load_config()
+        client = FakeVectorClient()
+
+        def bad_payload(url, **query):
+            return {"spatialReference": {"wkid": 7856}, "features": [{"geometry": None}]}
+
+        client.query_feature_payload = bad_payload
+        with tempfile.TemporaryDirectory() as directory:
+            output_dir = Path(directory) / "acquired"
+            with self.assertRaises(SourceValidationError):
+                stream_acquisition(config, client, output_dir, {"nsw-npws-estate"})
+            self.assertEqual(list(output_dir.iterdir()), [])
 
 
 if __name__ == "__main__":

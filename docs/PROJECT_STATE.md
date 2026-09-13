@@ -25,7 +25,7 @@ are:
 - `scripts/acquire_vector_sources.py`: bounded, paginated ArcGIS vector acquisition CLI;
 - `config/model.json`: S1 endpoints, seven sensitivity components, normalization, and approved sensitivity presets;
 - `pyproject.toml`: minimal dependency-free Python package metadata;
-- `tests/`: thirty-four standard-library unit tests covering cost, configuration, routing, source acquisition, vector acquisition, and terrain selection behavior;
+- `tests/`: thirty-six standard-library unit tests covering cost, configuration, routing, source acquisition, vector acquisition, and terrain selection behavior;
 - `benchmarks/benchmark_routing.py` and `benchmarks/results.json`: reproducible proxy benchmark;
 - `docs/ANALYTICAL_MODEL.md`: model semantics, evidence, and current execution boundary.
 
@@ -37,8 +37,9 @@ There is still no verified evidence of:
 - CI, deployment configuration, or a live application.
 
 The feasibility record remains source evidence and scenario context. Source acquisition
-is implemented for fixed endpoints and bounded ArcGIS vector layers, with live
-end-to-end captures verified for NPWS Estate and the railway layer into `/tmp` only.
+is implemented for fixed endpoints and bounded ArcGIS vector layers, with staged
+streaming output and live end-to-end captures verified for NPWS Estate and the railway
+layer into `/tmp` only.
 Terrain source selection has an explicit, tested local-artifact boundary, but no DEM
 has been acquired into this repository and no raster pixels have been processed.
 
@@ -113,8 +114,8 @@ Feasibility research has been performed against official source catalogues/servi
 and representative live endpoints. The following inputs remain unresolved:
 
 - full external capture of the large hydrography and road layers, plus terrain and
-  native-vegetation acquisition; the bounded vector adapter and page-size policy are
-  implemented but raw captures remain outside version control;
+  native-vegetation acquisition; the bounded vector adapter, staged streaming writer,
+  and page-size policy are implemented but raw captures remain outside version control;
 - actual ELVIS/NSW DEM acquisition and local artifact availability; Copernicus GLO-30
   is the approved fallback if the primary artifact is unavailable or invalid;
 - normalization details;
@@ -134,11 +135,11 @@ No hosting provider is selected as a confirmed implementation decision.
 
 Verified on 13 September 2026:
 
-- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 34 tests passed;
+- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 36 tests passed;
 - `PYTHONPATH=src python3 benchmarks/benchmark_routing.py --sizes 128 256 512` — completed and retained in `benchmarks/results.json`;
 - `PYTHONPATH=src python3 scripts/acquire_sources.py --output <temporary manifest> --timeout 20` — live GA endpoint acquisition succeeded; the manifest was written outside the repository;
 - `PYTHONPATH=src python3 scripts/probe_sources.py --output <temporary report> --timeout 20` — live probe validated GA, NPWS, hydrography, and transport; deferred SVTM WMS and reported the NSW elevation no-raster limitation;
-- `PYTHONPATH=src python3 scripts/acquire_vector_sources.py --source-id nsw-npws-estate --output-dir <temporary directory> --timeout 30` — acquired 20 NPWS polygon features in one complete page;
+- `PYTHONPATH=src python3 scripts/acquire_vector_sources.py --source-id nsw-npws-estate --output-dir <temporary directory> --timeout 30` — staged and published 20 NPWS polygon features in one complete page;
 - `PYTHONPATH=src python3 scripts/acquire_vector_sources.py --source-id nsw-transport --component railways --output-dir <temporary directory> --timeout 30` — acquired 415 railway features in three complete pages;
 - the benchmark produced equal A*/Dijkstra path costs and fewer explored cells for A* at all three sizes;
 - JSON configuration and benchmark output parse successfully through the Python standard library.
@@ -162,8 +163,8 @@ and the decision log; the selector does not silently substitute an unconfigured 
 
 ## Current Development Frontier
 
-Priority 3 is active. The terrain source policy, local artifact contract, and bounded
-ArcGIS vector acquisition boundary are verified. The next connected work is to
-complete external source capture where practical, then implement DEM/raster-vector
-derivation, aligned grids, route assessment, and the three offline routes. No frontend
-implementation should precede those data and model checks.
+Priority 3 is active. The terrain source policy, local artifact contract, bounded
+ArcGIS vector acquisition boundary, and staged streaming publication path are verified.
+The next connected work is to complete external source capture where practical, then
+implement DEM/raster-vector derivation, aligned grids, route assessment, and the three
+offline routes. No frontend implementation should precede those data and model checks.

@@ -91,9 +91,11 @@ provenance. Actual portal acquisition, raster-pixel reading, and reprojection re
 future work; the selected source policy does not claim those operations are complete.
 `scripts/acquire_vector_sources.py` now provides bounded, object-ID-paginated ArcGIS
 acquisition for the NPWS, hydrography, road, and railway layers, requesting EPSG:7856
-output and rejecting incomplete pages. It writes external per-layer ArcGIS JSON
-feature collections and a compact manifest; it does not clip, repair, rasterize, or
-derive cost surfaces. Terrain raster and SVTM WMS acquisition remain future work.
+output and rejecting incomplete pages. Its CLI streams validated pages to staged
+external per-layer ArcGIS JSON feature collections and publishes a compact manifest
+only after the selected capture completes; the module also retains an in-memory API
+for small deterministic tests. It does not clip, repair, rasterize, or derive cost
+surfaces. Terrain raster and SVTM WMS acquisition remain future work.
 
 ### 2. Study-area preparation
 
