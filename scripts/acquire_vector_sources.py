@@ -37,6 +37,46 @@ def _layer_url(source_url: str, layer_id: int) -> str:
     return source_url.rstrip("/") if last_segment.isdigit() else f"{source_url.rstrip('/')}/{layer_id}"
 
 
+def _configured_layer_summary(
+    client: ArcGISClient,
+    source_url: str,
+    source_id: str,
+    summary: dict[str, Any],
+    layer: dict[str, Any],
+) -> dict[str, Any]:
+    """Resolve a configured layer, filling sparse service summaries from layer metadata."""
+
+    layer_id = layer["layer_id"]
+    layer_summary = next(
+        (item for item in summary["layers"] if item.get("id") == layer_id), None
+    )
+    if layer_summary is None:
+        raise SourceValidationError(
+            f"configured acquisition layer is unavailable: {source_id}:{layer_id}"
+        )
+    if "type" not in layer_summary or "geometryType" not in layer_summary:
+        detail_summary = summarize_arcgis_metadata(
+            client.service_metadata(_layer_url(source_url, layer_id))
+        )
+        detail = next(
+            (item for item in detail_summary["layers"] if item.get("id") == layer_id), None
+        )
+        if detail is None:
+            raise SourceValidationError(
+                f"configured acquisition layer detail is unavailable: {source_id}:{layer_id}"
+            )
+        layer_summary = detail
+    if layer_summary.get("type") != "Feature Layer":
+        raise SourceValidationError(
+            f"configured acquisition layer is not queryable: {source_id}:{layer_id}"
+        )
+    if layer_summary.get("geometryType") != layer["geometry_type"]:
+        raise SourceValidationError(
+            f"configured acquisition geometry mismatch: {source_id}:{layer_id}"
+        )
+    return layer_summary
+
+
 def _acquire_complete_layer(
     client: ArcGISClient,
     layer_url: str,
@@ -146,22 +186,15 @@ def acquire(
             if components is not None and layer["component"] not in components:
                 continue
             layer_id = layer["layer_id"]
-            layer_summary = next(
-                (item for item in summary["layers"] if item.get("id") == layer_id), None
+            layer_summary = _configured_layer_summary(
+                client, source_url, source["id"], summary, layer
             )
-            if layer_summary is None:
-                raise SourceValidationError(
-                    f"configured acquisition layer is unavailable: {source['id']}:{layer_id}"
-                )
-            if layer_summary.get("type") != "Feature Layer":
-                raise SourceValidationError(
-                    f"configured acquisition layer is not queryable: {source['id']}:{layer_id}"
-                )
-            if layer_summary.get("geometryType") != layer["geometry_type"]:
-                raise SourceValidationError(
-                    f"configured acquisition geometry mismatch: {source['id']}:{layer_id}"
-                )
             layer_url = _layer_url(source_url, layer_id)
+            layer_page_size = int(layer.get("page_size", source.get("page_size", page_size)))
+            if layer_page_size <= 0:
+                raise SourceValidationError(
+                    f"configured page size must be positive: {source['id']}:{layer_id}"
+                )
             features, query = _acquire_complete_layer(
                 client,
                 layer_url,
@@ -169,7 +202,7 @@ def acquire(
                 arcgis_envelope,
                 input_crs,
                 output_crs,
-                page_size,
+                layer_page_size,
             )
             acquired_layers.append(
                 {
@@ -298,22 +331,15 @@ def stream_acquisition(
                 if components is not None and layer["component"] not in components:
                     continue
                 layer_id = layer["layer_id"]
-                layer_summary = next(
-                    (item for item in summary["layers"] if item.get("id") == layer_id), None
+                layer_summary = _configured_layer_summary(
+                    client, source["url"], source["id"], summary, layer
                 )
-                if layer_summary is None:
-                    raise SourceValidationError(
-                        f"configured acquisition layer is unavailable: {source['id']}:{layer_id}"
-                    )
-                if layer_summary.get("type") != "Feature Layer":
-                    raise SourceValidationError(
-                        f"configured acquisition layer is not queryable: {source['id']}:{layer_id}"
-                    )
-                if layer_summary.get("geometryType") != layer["geometry_type"]:
-                    raise SourceValidationError(
-                        f"configured acquisition geometry mismatch: {source['id']}:{layer_id}"
-                    )
                 layer_url = _layer_url(source["url"], layer_id)
+                layer_page_size = int(layer.get("page_size", source.get("page_size", page_size)))
+                if layer_page_size <= 0:
+                    raise SourceValidationError(
+                        f"configured page size must be positive: {source['id']}:{layer_id}"
+                    )
                 filename = _artifact_name(source["id"], layer["component"])
                 staged_path = staging / filename
                 handle = None
@@ -361,7 +387,7 @@ def stream_acquisition(
                         arcgis_envelope,
                         input_crs,
                         output_crs,
-                        page_size,
+                        layer_page_size,
                         on_begin=begin,
                         on_page=page,
                         on_end=end,

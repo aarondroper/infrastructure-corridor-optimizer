@@ -94,8 +94,10 @@ acquisition for the NPWS, hydrography, road, and railway layers, requesting EPSG
 output and rejecting incomplete pages. Its CLI streams validated pages to staged
 external per-layer ArcGIS JSON feature collections and publishes a compact manifest
 only after the selected capture completes; the module also retains an in-memory API
-for small deterministic tests. It does not clip, repair, rasterize, or derive cost
-surfaces. Terrain raster and SVTM WMS acquisition remain future work.
+for small deterministic tests. The configured road layer uses a 150-ID page size
+because the live transport service rejected the 200-ID default, while the global
+default remains 200. It does not clip, repair, rasterize, or derive cost surfaces.
+Terrain raster and SVTM WMS acquisition remain future work.
 
 ### 2. Study-area preparation
 

@@ -28,14 +28,32 @@ class FakeVectorClient:
                 "spatialReference": {"wkid": 4283},
             }
         if "Hydrography" in url:
+            layer_id_text = url.rstrip("/").rsplit("/", 1)[-1]
+            if layer_id_text.isdigit():
+                layer_id = int(layer_id_text)
+                layer_details = {
+                    3: ("Hydroline", "esriGeometryPolyline"),
+                    4: ("Named Watercourse", "esriGeometryPolyline"),
+                    5: ("Named Watercourse SS", "esriGeometryPolyline"),
+                    6: ("Named Watercourse LS", "esriGeometryPolyline"),
+                    10: ("HydroArea", "esriGeometryPolygon"),
+                }
+                name, geometry_type = layer_details[layer_id]
+                return {
+                    "id": layer_id,
+                    "name": name,
+                    "type": "Feature Layer",
+                    "geometryType": geometry_type,
+                    "spatialReference": {"wkid": 3857},
+                }
             return {
                 "spatialReference": {"wkid": 3857},
                 "layers": [
-                    {"id": 3, "name": "Hydroline", "type": "Feature Layer", "geometryType": "esriGeometryPolyline"},
-                    {"id": 4, "name": "Named Watercourse", "type": "Feature Layer", "geometryType": "esriGeometryPolyline"},
-                    {"id": 5, "name": "Named Watercourse SS", "type": "Feature Layer", "geometryType": "esriGeometryPolyline"},
-                    {"id": 6, "name": "Named Watercourse LS", "type": "Feature Layer", "geometryType": "esriGeometryPolyline"},
-                    {"id": 10, "name": "HydroArea", "type": "Feature Layer", "geometryType": "esriGeometryPolygon"},
+                    {"id": 3, "name": "Hydroline", "parentLayerId": 0},
+                    {"id": 4, "name": "Named Watercourse", "parentLayerId": 0},
+                    {"id": 5, "name": "Named Watercourse SS", "parentLayerId": 4},
+                    {"id": 6, "name": "Named Watercourse LS", "parentLayerId": 4},
+                    {"id": 10, "name": "HydroArea", "parentLayerId": 0},
                 ],
             }
         return {
@@ -104,6 +122,13 @@ class VectorAcquisitionTests(unittest.TestCase):
         bundle = acquire(config, client, components={"railways"})
         self.assertEqual([source["source_id"] for source in bundle["sources"]], ["nsw-transport"])
         self.assertEqual([layer["component"] for layer in bundle["sources"][0]["layers"]], ["railways"])
+
+    def test_layer_page_size_override_is_carried_to_feature_queries(self):
+        config = load_config()
+        client = FakeVectorClient()
+        bundle = acquire(config, client, components={"roads"})
+        layer = bundle["sources"][0]["layers"][0]
+        self.assertEqual(layer["query"]["page_size"], 150)
 
     def test_streaming_writer_publishes_only_after_layer_validation(self):
         config = load_config()

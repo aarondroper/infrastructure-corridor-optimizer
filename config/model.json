@@ -83,7 +83,7 @@
         {"id": 7, "name": "Railway", "geometry_type": "esriGeometryPolyline"}
       ],
       "acquisition_layers": [
-        {"layer_id": 5, "component": "roads", "geometry_type": "esriGeometryPolyline", "out_fields": ["OBJECTID", "roadnamebase", "roadnametype", "functionhierarchy", "roadontype", "surface", "lanecount", "operationalstatus", "relevance"]},
+        {"layer_id": 5, "component": "roads", "geometry_type": "esriGeometryPolyline", "page_size": 150, "out_fields": ["OBJECTID", "roadnamebase", "roadnametype", "functionhierarchy", "roadontype", "surface", "lanecount", "operationalstatus", "relevance"]},
         {"layer_id": 7, "component": "railways", "geometry_type": "esriGeometryPolyline", "out_fields": ["OBJECTID", "railwayname", "gauge", "railontype", "operationalstatus", "relevance"]}
       ]
     }
