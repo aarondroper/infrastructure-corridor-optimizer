@@ -26,12 +26,11 @@ The preferred high-level pattern is:
 
 The repository currently contains governance and feasibility documentation plus a
 dependency-light analytical core under `src/ico_model/`, approved sensitivity model configuration,
-unit tests, and a deterministic benchmark. The implemented core validates and combines
-normalized grids and runs deterministic eight-neighbor A*/Dijkstra routing. There are
-still no source-acquisition modules, geographic data assets, frontend files, build or
-deployment configuration, or generated routes. The `.git` path exists in the workspace
-but is not a usable Git repository, so history and versioned topology cannot be
-verified.
+unit tests, a minimal Python package manifest, an ArcGIS endpoint acquisition module,
+and a deterministic benchmark. The implemented core validates and combines normalized
+grids, runs deterministic eight-neighbor A*/Dijkstra routing, and validates a live
+Geoscience Australia endpoint snapshot. There are still no geographic cost surfaces,
+frontend files, build/deployment configuration, or generated routes.
 
 The sections below distinguish implemented analytical behavior from intended pipeline
 and application components. They become verified only when implemented files and
@@ -81,6 +80,12 @@ Responsibilities:
 - record source URLs/services, versions/dates where available, licensing/provenance, and acquisition metadata;
 - fail clearly when required data cannot be obtained or validated;
 - avoid embedding unnecessary manual preprocessing steps.
+
+The implemented `ico_model.sources` module currently covers bounded ArcGIS REST JSON
+requests, service CRS validation, and fixed endpoint identity validation. The CLI in
+`scripts/acquire_sources.py` writes a small provenance manifest. Acquisition adapters
+for the terrain, environmental, hydrography, road, and railway layers remain future
+work.
 
 ### 2. Study-area preparation
 

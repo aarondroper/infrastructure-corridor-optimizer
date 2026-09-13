@@ -8,15 +8,17 @@ Exact commands should be added or updated once the repository establishes its re
 
 ## 0. Current Repository Baseline and Applicability
 
-The current repository has a dependency-light Python analytical core and standard-library
-unit tests, but no package manifest, configured linter/type checker, geographic data
-pipeline, frontend build, or deployment. For core changes, run the documented unit
-tests and benchmark in addition to repository inventory and consistency checks:
+The current repository has a dependency-light Python analytical core, a standard-library
+unit test suite, a minimal `pyproject.toml`, and an endpoint acquisition script. It has
+no configured linter/type checker, full geographic data pipeline, frontend build, or
+deployment. For Python/core changes, run the documented unit tests and relevant
+acquisition checks in addition to repository inventory and consistency checks:
 
 - `find . -maxdepth 4 -type f -print | sort` to inventory files;
 - `rg --files` to confirm the source/configuration surface;
 - `rg -n` searches for stale implementation claims, unsupported completion claims, and broken document references;
 - `PYTHONPATH=src python3 -m unittest discover -s tests -v` for the current analytical core;
+- `PYTHONPATH=src python3 scripts/acquire_sources.py --output <temporary manifest>` for live endpoint validation when network access is available;
 - `PYTHONPATH=src python3 benchmarks/benchmark_routing.py --sizes 128 256 512` for the current routing proxy benchmark;
 - direct review of all changed Markdown files;
 - `git status --short --branch`, `git diff --check`, and the relevant diff when a usable Git repository exists.

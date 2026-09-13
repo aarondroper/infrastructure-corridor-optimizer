@@ -11,31 +11,37 @@ Update this file whenever implementation, validation, deployment, data readiness
 ### Repository implementation
 
 The repository contains the governance baseline, feasibility evidence, an explicit
-approved sensitivity model, a dependency-light Python routing core, configuration, tests,
-and a deterministic benchmark. The implemented files are:
+approved sensitivity model, a dependency-light Python routing core, configuration,
+tests, source-acquisition code, and a deterministic benchmark. The implemented files
+are:
 
 - `src/ico_model/cost.py`: normalization, weight validation, and weighted cost-layer combination;
 - `src/ico_model/routing.py`: deterministic eight-neighbor A* and Dijkstra routing;
+- `src/ico_model/sources.py`: bounded ArcGIS REST access and endpoint validation;
+- `scripts/acquire_sources.py`: live endpoint acquisition and provenance manifest CLI;
 - `config/model.json`: S1 endpoints, seven sensitivity components, normalization, and approved sensitivity presets;
-- `tests/`: twelve standard-library unit tests covering cost, configuration, and routing behavior;
+- `pyproject.toml`: minimal dependency-free Python package metadata;
+- `tests/`: nineteen standard-library unit tests covering cost, configuration, routing, and source acquisition behavior;
 - `benchmarks/benchmark_routing.py` and `benchmarks/results.json`: reproducible proxy benchmark;
 - `docs/ANALYTICAL_MODEL.md`: model semantics, evidence, and current execution boundary.
 
 There is still no verified evidence of:
 
 - React/TypeScript frontend code or MapLibre integration;
-- reproducible source-acquisition scripts or selected source datasets;
+- acquisition adapters for the full constraint-source stack or selected source datasets;
 - generated geographic cost surfaces, routes, or assessment assets;
 - CI, deployment configuration, or a live application.
 
-The feasibility record remains source evidence and scenario context; it is not a data
-ingestion pipeline or geographic route result.
+The feasibility record remains source evidence and scenario context. Source acquisition
+is implemented only for the fixed endpoint records, not yet for the full geographic
+constraint stack or route generation.
 
 The hidden `.agents` and `.codex` directories are empty in the inspected workspace.
-There is no README or package manifest yet; the source tree, executable benchmark, and
-project-specific analytical configuration are now present as listed above.
+There is no README yet; the source tree, executable benchmark, package manifest, and
+project-specific analytical configuration are present as listed above.
 
-The workspace has a `.git` directory entry, but it contains no usable Git metadata: `git -C . status`, `git -C . rev-parse --show-toplevel`, and `git -C . log` all fail with “not a git repository”. Commit history, tracked/untracked state, and a Git diff therefore cannot be verified here.
+The repository is a usable Git repository on branch `main`; commit history and Git
+diff/status checks are available.
 
 ### Governance
 
@@ -52,14 +58,16 @@ The governance framework consists of:
 - `docs/plans/active/`;
 - `docs/plans/completed/`.
 
-The governance files are present in the workspace. Their commit status cannot be established because the available `.git` directory is not a usable repository.
+The governance files are present in the workspace and are versioned in the Git
+repository.
 
 ## Implemented
 
 The governance baseline, study/data feasibility record, analytical model definition,
-dependency-light cost/routing core, approved sensitivity configuration, unit tests, and
-deterministic routing benchmark are present. The core has no GIS dependency by design;
-the full source-to-route pipeline remains future work.
+dependency-light cost/routing core, approved sensitivity configuration, endpoint
+acquisition boundary, unit tests, and deterministic routing benchmark are present. The
+core and acquisition boundary have no GIS dependency by design; the full geographic
+source-to-route pipeline remains future work.
 
 ## Verified
 
@@ -86,17 +94,18 @@ These are preserved in `docs/DECISIONS.md` and do not establish that correspondi
 
 ## Partially Implemented
 
-Priority 2 is complete: the transparent model schema, tested grid operations, approved
-sensitivity configuration, synthetic benchmark, A* selection, and offline precomputed
-MVP boundary are verified. Geographic source acquisition, raster/vector derivation,
-route assessment, and application assets are not implemented.
+Priority 2 is complete. Priority 3 is active: the transparent model schema, tested
+grid operations, approved sensitivity configuration, synthetic benchmark, A* selection,
+offline precomputed MVP boundary, and fixed-endpoint acquisition slice are verified.
+Full source acquisition, raster/vector derivation, route assessment, and application
+assets are not implemented.
 
 ## Open Inputs / Limitations
 
 Feasibility research has been performed against official source catalogues/services
 and representative live endpoints. The following inputs remain unresolved:
 
-- final source acquisition choices and tile/feature coverage validation;
+- acquisition adapters and tile/feature coverage validation for terrain, protected land, native vegetation, hydrography, roads, and railways;
 - normalization details;
 - routing grid resolution;
 - geographic source coverage and data-quality validation;
@@ -114,13 +123,15 @@ No hosting provider is selected as a confirmed implementation decision.
 
 Verified on 13 September 2026:
 
-- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 12 tests passed;
+- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 19 tests passed;
 - `PYTHONPATH=src python3 benchmarks/benchmark_routing.py --sizes 128 256 512` — completed and retained in `benchmarks/results.json`;
+- `PYTHONPATH=src python3 scripts/acquire_sources.py --output <temporary manifest> --timeout 20` — live GA endpoint acquisition succeeded; the manifest was written outside the repository;
 - the benchmark produced equal A*/Dijkstra path costs and fewer explored cells for A* at all three sizes;
 - JSON configuration and benchmark output parse successfully through the Python standard library.
 
-No linting, type-check, frontend build, geographic data-validation, or deployment
-verification exists yet. Git metadata was tested and found unusable as noted above.
+No linting, type-check, frontend build, full geographic data-validation, or deployment
+verification exists yet. Git status and diff checks are available and are run before
+commits.
 
 ## Owner Decision Status
 
@@ -130,9 +141,12 @@ presets, and offline precomputed routes for the static MVP. Future changes to th
 study envelope, constraint philosophy, preset assumptions, or interactive weighting
 scope must be reviewed if they materially change the product.
 
+No new owner decision is required for the current endpoint-acquisition implementation
+slice.
+
 ## Current Development Frontier
 
-Priority 2 is complete. The next frontier is Priority 3: implement source acquisition,
-coverage checks, geographic grid derivation, and offline generation of the approved
-sensitivity routes. No frontend implementation should precede those data and model
-checks.
+Priority 3 is active. The next connected work is to add bounded acquisition and
+coverage-validation adapters for the approved constraint sources, then derive aligned
+geographic grids and generate the three offline routes. No frontend implementation
+should precede those data and model checks.

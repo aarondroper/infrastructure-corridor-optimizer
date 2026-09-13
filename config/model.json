@@ -11,6 +11,7 @@
       "role": "fixed endpoints and infrastructure context",
       "url": "https://services.ga.gov.au/gis/rest/services/Electricity_Infrastructure/MapServer",
       "access": "ArcGIS REST",
+      "layer_id": 1,
       "crs_epsg": 7844
     },
     {
