@@ -5,5 +5,7 @@ venv/
 .pytest_cache/
 data/raw/
 data/derived/
+data/external/
+data/cache/
 data/source_manifest.json
 data/source_probe.json

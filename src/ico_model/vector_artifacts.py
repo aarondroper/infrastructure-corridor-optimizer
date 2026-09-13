@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .sources import SourceValidationError, validate_feature_geometries
+from .sources import (
+    SourceValidationError,
+    validate_feature_geometries,
+    validate_feature_object_ids,
+)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -133,11 +138,56 @@ def validate_vector_manifest(
             page_count = _required_int(query, "page_count", f"{context} query")
             if feature_count < 0 or object_id_count < 0 or page_size <= 0 or page_count < 0:
                 raise SourceValidationError(f"{context} has invalid count or page metadata")
-            expected_page_count = math.ceil(object_id_count / page_size)
+            tiles = query.get("tiles")
+            if tiles is not None:
+                if not isinstance(tiles, list) or not tiles:
+                    raise SourceValidationError(f"{context} query has invalid tile metadata")
+                expected_page_count = 0
+                tile_id_count = 0
+                for tile in tiles:
+                    if not isinstance(tile, dict):
+                        raise SourceValidationError(f"{context} query has an invalid tile record")
+                    tile_object_count = _required_int(tile, "object_id_count", f"{context} tile")
+                    tile_pages = _required_int(tile, "page_count", f"{context} tile")
+                    if tile_object_count < 0 or tile_pages < 0:
+                        raise SourceValidationError(f"{context} tile has invalid count metadata")
+                    if tile_pages != math.ceil(tile_object_count / page_size):
+                        raise SourceValidationError(f"{context} tile page count is inconsistent")
+                    expected_page_count += tile_pages
+                    tile_id_count += tile_object_count
+                if query.get("complete") is not True:
+                    raise SourceValidationError(f"{context} tiled query is not complete")
+                returned_feature_count = _required_int(
+                    query, "returned_feature_count", f"{context} query"
+                )
+                if returned_feature_count != feature_count:
+                    raise SourceValidationError(f"{context} returned feature count is inconsistent")
+                if tile_id_count < object_id_count:
+                    raise SourceValidationError(f"{context} tile IDs undercount the unique object IDs")
+            else:
+                expected_page_count = math.ceil(object_id_count / page_size)
             if page_count != expected_page_count:
                 raise SourceValidationError(f"{context} page count does not match object-ID count")
             if feature_count != object_id_count or len(features) != feature_count:
                 raise SourceValidationError(f"{context} feature count does not match its object-ID manifest")
+            feature_ids: list[int] = []
+            for index, feature in enumerate(features):
+                attributes = feature.get("attributes")
+                if not isinstance(attributes, Mapping):
+                    raise SourceValidationError(
+                        f"{context} feature {index} has no attributes for object-ID validation"
+                    )
+                value = next(
+                    (item for key, item in attributes.items() if str(key).lower() == "objectid"),
+                    None,
+                )
+                try:
+                    feature_ids.append(int(value))
+                except (TypeError, ValueError) as exc:
+                    raise SourceValidationError(
+                        f"{context} feature {index} has no valid OBJECTID"
+                    ) from exc
+            validate_feature_object_ids(features, feature_ids, str(artifact_path))
             total_features += feature_count
             report_layers.append(
                 {

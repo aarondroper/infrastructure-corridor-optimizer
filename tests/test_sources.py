@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from urllib.error import HTTPError
+from urllib.error import URLError
 from urllib.parse import parse_qs, urlparse
 
 from ico_model.sources import (
@@ -18,6 +19,7 @@ from ico_model.sources import (
     validate_expected_layer_names,
     validate_required_layer_type,
     validate_feature_geometries,
+    validate_feature_object_ids,
     validate_feature_payload_crs,
     write_manifest,
 )
@@ -64,8 +66,8 @@ class FakeResponse:
     def __exit__(self, *_):
         return False
 
-    def read(self):
-        return self.payload
+    def read(self, size=-1):
+        return self.payload if size < 0 else self.payload[:size]
 
 
 class SourceTests(unittest.TestCase):
@@ -91,6 +93,39 @@ class SourceTests(unittest.TestCase):
 
         with self.assertRaises(SourceAccessError):
             ArcGISClient(opener).fetch_json("https://example.test/service")
+
+    def test_client_rejects_oversized_response(self):
+        def opener(request, timeout):
+            return FakeResponse({"payload": "too large"})
+
+        with self.assertRaisesRegex(SourceAccessError, "exceeds configured limit"):
+            ArcGISClient(opener, max_response_bytes=4).fetch_json("https://example.test/service")
+
+    def test_client_retries_transient_failures_with_exponential_backoff(self):
+        attempts = []
+        delays = []
+
+        def opener(request, timeout):
+            attempts.append(request.full_url)
+            if len(attempts) < 3:
+                raise URLError("temporary failure")
+            return FakeResponse({"ok": True})
+
+        payload = ArcGISClient(
+            opener,
+            max_retries=2,
+            retry_backoff_seconds=0.25,
+            sleeper=delays.append,
+        ).fetch_json("https://example.test/service")
+        self.assertEqual(payload, {"ok": True})
+        self.assertEqual(len(attempts), 3)
+        self.assertEqual(delays, [0.25, 0.5])
+
+    def test_feature_object_ids_must_match_the_requested_page(self):
+        features = [{"attributes": {"OBJECTID": 7}, "geometry": {"x": 1, "y": 2}}]
+        validate_feature_object_ids(features, [7], "https://example.test/0")
+        with self.assertRaisesRegex(SourceValidationError, "object IDs"):
+            validate_feature_object_ids(features, [8], "https://example.test/0")
 
     def test_feature_query_carries_bounded_geometry_and_crs(self):
         observed = {}

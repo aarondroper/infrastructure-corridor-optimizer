@@ -8,6 +8,7 @@ from .sources import (
     SourceValidationError,
     summarize_arcgis_metadata,
     validate_feature_geometries,
+    validate_feature_object_ids,
     validate_feature_payload_crs,
     validate_expected_layers,
     validate_expected_layer_names,
@@ -18,6 +19,13 @@ from .terrain import (
     load_terrain_artifact_metadata,
     select_terrain_artifact,
     validate_terrain_artifact,
+)
+from .dem_acquisition import (
+    DemAcquisitionError,
+    acquire_copernicus_tiles,
+    copernicus_tiles,
+    inspect_geotiff,
+    validate_copernicus_geotiff,
 )
 from .vector_artifacts import validate_vector_manifest
 from .vector_schema import (
@@ -43,6 +51,7 @@ __all__ = [
     "SourceValidationError",
     "summarize_arcgis_metadata",
     "validate_feature_geometries",
+    "validate_feature_object_ids",
     "validate_feature_payload_crs",
     "validate_expected_layers",
     "validate_expected_layer_names",
@@ -51,6 +60,11 @@ __all__ = [
     "load_terrain_artifact_metadata",
     "select_terrain_artifact",
     "validate_terrain_artifact",
+    "DemAcquisitionError",
+    "acquire_copernicus_tiles",
+    "copernicus_tiles",
+    "inspect_geotiff",
+    "validate_copernicus_geotiff",
     "validate_vector_manifest",
     "COMPONENT_FIELD_ALIASES",
     "normalize_feature",

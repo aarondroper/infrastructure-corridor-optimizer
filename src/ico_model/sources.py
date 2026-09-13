@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -55,12 +56,30 @@ class ArcGISClient:
         *,
         timeout_seconds: float = 30.0,
         user_agent: str = "infrastructure-corridor-optimizer/0.1",
+        max_retries: int = 2,
+        retry_backoff_seconds: float = 1.0,
+        max_response_bytes: int | None = None,
+        sleeper: Callable[[float], None] = time.sleep,
     ) -> None:
         if timeout_seconds <= 0 or not math.isfinite(timeout_seconds):
             raise ValueError("timeout_seconds must be finite and positive")
+        if isinstance(max_retries, bool) or not isinstance(max_retries, int) or max_retries < 0:
+            raise ValueError("max_retries must be a non-negative integer")
+        if retry_backoff_seconds < 0 or not math.isfinite(retry_backoff_seconds):
+            raise ValueError("retry_backoff_seconds must be finite and non-negative")
+        if max_response_bytes is not None and (
+            isinstance(max_response_bytes, bool)
+            or not isinstance(max_response_bytes, int)
+            or max_response_bytes <= 0
+        ):
+            raise ValueError("max_response_bytes must be a positive integer when provided")
         self._opener = opener or urlopen
         self.timeout_seconds = timeout_seconds
         self.user_agent = user_agent
+        self.max_retries = max_retries
+        self.retry_backoff_seconds = retry_backoff_seconds
+        self.max_response_bytes = max_response_bytes
+        self._sleeper = sleeper
 
     def fetch_json(
         self, url: str, params: Mapping[str, str | int | bool] | None = None
@@ -73,22 +92,48 @@ class ArcGISClient:
             f"{url}{separator}{urlencode(query)}",
             headers={"User-Agent": self.user_agent, "Accept": "application/json"},
         )
-        try:
-            with self._opener(request, timeout=self.timeout_seconds) as response:
-                raw = response.read()
-        except HTTPError as exc:
-            raise SourceAccessError(f"source returned HTTP {exc.code}: {url}") from exc
-        except (URLError, TimeoutError, OSError) as exc:
-            raise SourceAccessError(f"source request failed: {url}: {exc}") from exc
-        try:
-            payload = json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
-        except (TypeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise SourceAccessError(f"source returned invalid JSON: {url}") from exc
-        if not isinstance(payload, dict):
-            raise SourceAccessError(f"source returned a non-object JSON response: {url}")
-        if "error" in payload:
-            raise SourceAccessError(f"ArcGIS reported an error for {url}: {payload['error']}")
-        return payload
+        retryable_http_codes = {408, 425, 429, 500, 502, 503, 504}
+        for attempt in range(self.max_retries + 1):
+            try:
+                with self._opener(request, timeout=self.timeout_seconds) as response:
+                    read_size = self.max_response_bytes + 1 if self.max_response_bytes else -1
+                    raw = response.read(read_size)
+                    if (
+                        self.max_response_bytes is not None
+                        and len(raw) > self.max_response_bytes
+                    ):
+                        raise SourceAccessError(
+                            f"source response exceeds configured limit of "
+                            f"{self.max_response_bytes} bytes: {url}"
+                        )
+            except HTTPError as exc:
+                if exc.code in retryable_http_codes and attempt < self.max_retries:
+                    self._sleep_before_retry(attempt)
+                    continue
+                raise SourceAccessError(f"source returned HTTP {exc.code}: {url}") from exc
+            except (URLError, TimeoutError, OSError) as exc:
+                if attempt < self.max_retries:
+                    self._sleep_before_retry(attempt)
+                    continue
+                raise SourceAccessError(f"source request failed: {url}: {exc}") from exc
+            try:
+                payload = json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
+            except (TypeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise SourceAccessError(f"source returned invalid JSON: {url}") from exc
+            if not isinstance(payload, dict):
+                raise SourceAccessError(f"source returned a non-object JSON response: {url}")
+            if "error" in payload:
+                error = payload["error"]
+                error_code = error.get("code") if isinstance(error, Mapping) else None
+                if error_code in retryable_http_codes and attempt < self.max_retries:
+                    self._sleep_before_retry(attempt)
+                    continue
+                raise SourceAccessError(f"ArcGIS reported an error for {url}: {error}")
+            return payload
+        raise SourceAccessError(f"source request failed after retries: {url}")
+
+    def _sleep_before_retry(self, attempt: int) -> None:
+        self._sleeper(self.retry_backoff_seconds * (2**attempt))
 
     def service_metadata(self, service_url: str) -> dict[str, Any]:
         return self.fetch_json(service_url)
@@ -238,6 +283,35 @@ def validate_feature_geometries(
             raise SourceValidationError(
                 f"ArcGIS feature {index} has invalid {expected_geometry_type} geometry: {layer_url}"
             )
+
+
+def validate_feature_object_ids(
+    features: Sequence[Mapping[str, Any]], expected_ids: Sequence[int], layer_url: str
+) -> None:
+    """Require a page to return exactly the requested ArcGIS object IDs."""
+
+    expected = [int(object_id) for object_id in expected_ids]
+    observed: list[int] = []
+    for index, feature in enumerate(features):
+        attributes = feature.get("attributes")
+        if not isinstance(attributes, Mapping):
+            raise SourceValidationError(
+                f"ArcGIS feature {index} has no attributes for object-ID validation: {layer_url}"
+            )
+        object_id = next(
+            (value for key, value in attributes.items() if str(key).lower() == "objectid"),
+            None,
+        )
+        try:
+            observed.append(int(object_id))
+        except (TypeError, ValueError) as exc:
+            raise SourceValidationError(
+                f"ArcGIS feature {index} has no valid OBJECTID: {layer_url}"
+            ) from exc
+    if len(observed) != len(set(observed)) or set(observed) != set(expected) or len(observed) != len(expected):
+        raise SourceValidationError(
+            f"ArcGIS page object IDs do not match the requested IDs: {layer_url}"
+        )
 
 
 def _attribute(properties: Mapping[str, Any], *names: str) -> Any:

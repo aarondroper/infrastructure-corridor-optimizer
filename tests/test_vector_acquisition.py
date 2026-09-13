@@ -4,14 +4,20 @@ import unittest
 from pathlib import Path
 
 from scripts.acquire_vector_sources import acquire, stream_acquisition, write_acquisition
-from ico_model.sources import SourceValidationError, write_manifest
+from ico_model.sources import SourceAccessError, SourceValidationError, write_manifest
 from ico_model.vector_artifacts import validate_vector_manifest
 
 
 def load_config():
-    return json.loads(
+    config = json.loads(
         (Path(__file__).parents[1] / "config" / "model.json").read_text(encoding="utf-8")
     )
+    # Keep existing in-memory tests focused on acquisition semantics; dedicated
+    # tests below exercise the production tiling settings.
+    config["arcgis_acquisition"]["tile_size_degrees"] = 10
+    for source in config["sources"]:
+        source.pop("spatial_chunking", None)
+    return config
 
 
 class FakeVectorClient:
@@ -87,11 +93,34 @@ class FakeVectorClient:
         geometry = {"rings": [[[1, 2], [3, 4], [5, 6], [1, 2]]]} if is_polygon else {
             "paths": [[[1, 2], [3, 4]]]
         }
-        return {"spatialReference": {"wkid": 7856}, "features": [{"attributes": {}, "geometry": geometry}]}
+        object_ids = query.get("object_ids", [])
+        return {
+            "spatialReference": {"wkid": 7856},
+            "features": [
+                {"attributes": {"OBJECTID": object_id}, "geometry": geometry}
+                for object_id in object_ids
+            ],
+        }
 
     def query_object_ids(self, url, **query):
         self.id_queries.append((url, query))
         return [1]
+
+
+class ResumeVectorClient(FakeVectorClient):
+    def __init__(self):
+        super().__init__()
+        self.fail_second_page = True
+
+    def query_object_ids(self, url, **query):
+        self.id_queries.append((url, query))
+        return [1, 2]
+
+    def query_feature_payload(self, url, **query):
+        if query.get("object_ids") == [2] and self.fail_second_page:
+            self.fail_second_page = False
+            raise SourceAccessError("temporary page failure")
+        return super().query_feature_payload(url, **query)
 
 
 class VectorAcquisitionTests(unittest.TestCase):
@@ -108,10 +137,7 @@ class VectorAcquisitionTests(unittest.TestCase):
         for _, query in client.queries:
             self.assertEqual(query["in_crs_epsg"], 7844)
             self.assertEqual(query["out_crs_epsg"], 7856)
-            self.assertEqual(
-                query["geometry"],
-                {"xmin": 150.82, "ymin": -33.15, "xmax": 151.62, "ymax": -32.27},
-            )
+            self.assertNotIn("geometry", query)
             self.assertNotEqual(query["out_fields"], ["*"])
 
         with tempfile.TemporaryDirectory() as directory:
@@ -176,6 +202,40 @@ class VectorAcquisitionTests(unittest.TestCase):
         self.assertEqual(layer["source_crs_epsg"], 3308)
         self.assertEqual(layer["query"]["page_size"], 1000)
 
+    def test_spatial_chunking_records_complete_tile_inventory(self):
+        config = load_config()
+        config["arcgis_acquisition"]["tile_size_degrees"] = 0.5
+        client = FakeVectorClient()
+        bundle = acquire(config, client, source_ids={"nsw-npws-estate"})
+        query = bundle["sources"][0]["layers"][0]["query"]
+        self.assertEqual(query["spatial_chunking"]["tile_count"], 4)
+        self.assertEqual(query["object_id_count"], 1)
+        self.assertEqual(query["returned_feature_count"], 1)
+        self.assertTrue(query["complete"])
+        self.assertEqual(len(query["tiles"]), 4)
+
+    def test_streaming_can_resume_from_completed_external_pages(self):
+        config = load_config()
+        config["sources"] = [
+            source for source in config["sources"] if source["id"] == "nsw-npws-estate"
+        ]
+        config["sources"][0]["acquisition_layers"][0]["page_size"] = 1
+        client = ResumeVectorClient()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output_dir = root / "acquired"
+            cache_dir = root / "cache"
+            with self.assertRaises(SourceAccessError):
+                stream_acquisition(config, client, output_dir, cache_dir=cache_dir)
+            self.assertTrue(
+                (cache_dir / "nsw-npws-estate--protected_land" / "tile-0000-page-00000.json").is_file()
+            )
+            manifest_path = stream_acquisition(
+                config, client, output_dir, cache_dir=cache_dir, resume=True
+            )
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["sources"][0]["layers"][0]["feature_count"], 2)
+
     def test_streaming_writer_publishes_only_after_layer_validation(self):
         config = load_config()
         client = FakeVectorClient()
@@ -202,6 +262,33 @@ class VectorAcquisitionTests(unittest.TestCase):
             output_dir = Path(directory) / "acquired"
             with self.assertRaises(SourceValidationError):
                 stream_acquisition(config, client, output_dir, {"nsw-npws-estate"})
+            self.assertEqual(list(output_dir.iterdir()), [])
+
+    def test_safety_limit_rejects_inventory_before_feature_download(self):
+        config = load_config()
+        config["sources"] = [
+            source for source in config["sources"] if source["id"] == "nsw-npws-estate"
+        ]
+        config["acquisition_safety"]["max_expected_features"] = 1
+        client = ResumeVectorClient()
+        with tempfile.TemporaryDirectory() as directory:
+            output_dir = Path(directory) / "acquired"
+            with self.assertRaisesRegex(SourceAccessError, "max_expected_features"):
+                stream_acquisition(config, client, output_dir)
+            self.assertEqual(client.queries, [])
+            self.assertEqual(list(output_dir.iterdir()), [])
+
+    def test_safety_limit_rejects_an_oversized_page_before_publication(self):
+        config = load_config()
+        config["sources"] = [
+            source for source in config["sources"] if source["id"] == "nsw-npws-estate"
+        ]
+        config["acquisition_safety"]["max_page_bytes"] = 1
+        client = FakeVectorClient()
+        with tempfile.TemporaryDirectory() as directory:
+            output_dir = Path(directory) / "acquired"
+            with self.assertRaisesRegex(SourceAccessError, "max_page_bytes"):
+                stream_acquisition(config, client, output_dir)
             self.assertEqual(list(output_dir.iterdir()), [])
 
     def test_artifact_validator_reports_complete_written_bundle(self):

@@ -13,6 +13,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from .dem_acquisition import (
+    DemAcquisitionError,
+    inspect_geotiff,
+    validate_copernicus_geotiff,
+)
 from .sources import write_manifest
 
 
@@ -103,21 +108,48 @@ def validate_terrain_artifact(
             f"terrain artifact source mismatch: expected {expected_source_id!r}, "
             f"observed {metadata.get('source_id')!r}"
         )
-    if metadata.get("artifact_type") != policy.get("required_artifact_type"):
+    artifact_type = metadata.get("artifact_type")
+    required_artifact_type = policy.get("required_artifact_type")
+    accepted_tile_set = required_artifact_type == "raster-dem" and artifact_type == "raster-dem-tile-set"
+    if artifact_type != required_artifact_type and not accepted_tile_set:
         raise TerrainArtifactError(
-            f"terrain artifact type must be {policy.get('required_artifact_type')!r}"
+            f"terrain artifact type must be {required_artifact_type!r}"
         )
     artifact_path = metadata.get("artifact_path")
     if not isinstance(artifact_path, str) or not artifact_path:
         raise TerrainArtifactError("terrain metadata must declare artifact_path")
-    if not Path(artifact_path).is_file():
+    artifact_file = Path(artifact_path)
+    if not artifact_file.is_file():
         raise TerrainArtifactError(f"terrain artifact file is unavailable: {artifact_path}")
+    if accepted_tile_set:
+        try:
+            tile_manifest = json.loads(artifact_file.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise TerrainArtifactError(f"DEM tile manifest is unreadable: {artifact_path}") from exc
+        if not isinstance(tile_manifest, dict) or tile_manifest.get("format") != "copernicus-dem-tile-set":
+            raise TerrainArtifactError("DEM tile manifest has an unsupported schema")
+        tiles = tile_manifest.get("tiles")
+        if not isinstance(tiles, list) or not tiles:
+            raise TerrainArtifactError("DEM tile manifest has no tiles")
+        for tile in tiles:
+            if not isinstance(tile, Mapping) or not isinstance(tile.get("artifact_path"), str):
+                raise TerrainArtifactError("DEM tile manifest has an invalid tile record")
+            tile_path = artifact_file.parent / tile["artifact_path"]
+            if not tile_path.is_file():
+                raise TerrainArtifactError(f"DEM tile is unavailable: {tile_path}")
+            try:
+                tile_metadata = inspect_geotiff(tile_path)
+                validate_copernicus_geotiff(tile_metadata, tile_path)
+            except (DemAcquisitionError, OSError) as exc:
+                raise TerrainArtifactError(f"DEM tile is invalid: {tile_path}") from exc
+            if tile_metadata["crs_epsg"] != 4326 or tile_metadata["nominal_resolution_m"] != 30.0:
+                raise TerrainArtifactError(f"DEM tile metadata is unsuitable: {tile_path}")
     artifact_crs = _integer(metadata.get("crs_epsg"), "crs_epsg")
     bounds_crs = _integer(metadata.get("bounds_crs_epsg"), "bounds_crs_epsg")
     expected_bounds_crs = _integer(
         policy.get("processing_envelope_crs_epsg"), "processing_envelope_crs_epsg"
     )
-    if bounds_crs != expected_bounds_crs:
+    if bounds_crs != expected_bounds_crs and {bounds_crs, expected_bounds_crs} != {4326, 7844}:
         raise TerrainArtifactError(
             f"terrain bounds CRS must be EPSG:{expected_bounds_crs}, observed EPSG:{bounds_crs}"
         )
@@ -145,7 +177,7 @@ def validate_terrain_artifact(
         raise TerrainArtifactError("terrain artifact bounds do not contain the processing envelope")
     return {
         "source_id": expected_source_id,
-        "artifact_type": metadata["artifact_type"],
+        "artifact_type": artifact_type,
         "artifact_path": artifact_path,
         "metadata_path": metadata.get("metadata_path"),
         "crs_epsg": artifact_crs,

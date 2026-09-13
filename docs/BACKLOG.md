@@ -79,9 +79,11 @@ Turn the approved study scenario and sources into a transparent, testable routin
 
 ## Priority 3 — Reproducible Data and Routing Pipeline
 
-**Status:** Active. The normalized-grid-to-route asset boundary is implemented and
-tested. This milestone still needs source-complete geographic derivation and must
-feed validated geographic grids into that boundary.
+**Status:** Active, with large live source capture paused after a disk-usage
+incident audit. The normalized-grid-to-route asset boundary and disk-safe source
+acquisition boundary are implemented and tested. This milestone still needs
+source-complete geographic derivation and must feed validated geographic grids into
+that boundary.
 
 ### Objective
 
@@ -90,6 +92,8 @@ Implement the full offline Python workflow from source acquisition through route
 ### Major Deliverables
 
 - reproducible acquisition of approved datasets;
+- bounded persistent-storage acquisition with response/page/feature/storage limits,
+  resumable page caches, and abandoned-cache cleanup;
 - terrain-source selection using ELVIS/NSW as primary and Copernicus GLO-30 as the
   explicit fallback, with validated local artifact provenance;
 - minimal repository and developer-tooling bootstrap for the approved workflow, including dependency/configuration manifests and an executable test entry point;
