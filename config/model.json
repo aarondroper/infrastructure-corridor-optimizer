@@ -76,7 +76,20 @@
       ],
       "acquisition_layers": [
         {"layer_id": 3, "component": "native_vegetation", "geometry_type": "esriGeometryPolygon", "page_size": 250, "out_fields": ["OBJECTID", "PCTID", "PCTName", "vegClass", "vegForm", "form_PCT", "Shape_Area"]}
-      ]
+      ],
+      "bulk_package": {
+        "dataset_id": "95437fbd-2ef7-44df-8579-d7a64402d42d",
+        "resource_id": "38cb096e-25e4-42e1-9996-807765ec7c47",
+        "release": "C2.0.M2.2",
+        "release_date": "2025-12",
+        "license": "Creative Commons Attribution",
+        "url": "https://datasets.seed.nsw.gov.au/dataset/95437fbd-2ef7-44df-8579-d7a64402d42d/resource/0994aef6-89db-44a5-b70a-9434d920dc06/download/svtm_nsw_extant_pct_vc2_0_m2_2_108.zip",
+        "archive_filename": "svtm_nsw_extant_pct_vc2_0_m2_2_108.zip",
+        "max_archive_bytes": 4000000000,
+        "max_extracted_bytes": 8000000000,
+        "max_working_set_bytes": 12000000000,
+        "required_fields": ["OBJECTID", "PCTID", "PCTName", "vegClass", "vegForm"]
+      }
     },
     {
       "id": "nsw-hydrography",

@@ -74,6 +74,12 @@ was restarted with an evidence-based 250-feature page size after a 1,000-feature
 request exceeded the 32 MB response ceiling. It reached 190 validated pages and
 approximately 1.16 GB of page cache / 333.5 MB staged output before a repeated
 ArcGIS 500 and later bounded probes returned HTTP 400/timeouts. No SVTM artifact
-was published; the page-250 cache is retained for resumable continuation. Full
-SVTM capture and geographic derivation remain blocked by current source-service
-reliability, not by observed storage pressure.
+was published; the page-250 cache is retained for resumable continuation. The
+official bulk package is configured as an engineering delivery alternative, but
+its resource currently returns an HTTP 202 web challenge and its page describes a
+symbology package; no analytical contents are accepted without reader validation.
+The approved Copernicus GLO-30 fallback was restored persistently and independently
+validated: four tiles, complete S1 coverage, and 160,523,100 bytes including
+metadata. Full SVTM capture and geographic derivation remain blocked by current
+source-service and bulk-resource access reliability, not by observed storage
+pressure.

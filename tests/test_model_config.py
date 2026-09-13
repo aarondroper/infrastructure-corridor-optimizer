@@ -43,6 +43,16 @@ class ModelConfigTests(unittest.TestCase):
         self.assertEqual(source["acquisition_layers"][0]["page_size"], 250)
         self.assertIn("PCTID", source["acquisition_layers"][0]["out_fields"])
 
+    def test_native_vegetation_source_declares_matching_bulk_package(self):
+        config_path = Path(__file__).parents[1] / "config" / "model.json"
+        config = json.loads(config_path.read_text())
+        source = next(source for source in config["sources"] if source["id"] == "nsw-svtm")
+        package = source["bulk_package"]
+        self.assertEqual(package["release"], "C2.0.M2.2")
+        self.assertEqual(package["license"], "Creative Commons Attribution")
+        self.assertIn("svtm_nsw_extant_pct_vc2_0_m2_2_108.zip", package["url"])
+        self.assertEqual(package["required_fields"][-1], "vegForm")
+
     def test_terrain_policy_has_ordered_sources_and_explicit_crs(self):
         config_path = Path(__file__).parents[1] / "config" / "model.json"
         config = json.loads(config_path.read_text())

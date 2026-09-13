@@ -23,6 +23,7 @@ are:
 - `src/ico_model/precomputed_routes.py`: normalized-grid validation, approved-preset A* execution, and staged route-asset publication;
 - `src/ico_model/terrain.py`: local DEM sidecar validation and explicit primary/fallback selection, including validated Copernicus tile sets;
 - `src/ico_model/dem_acquisition.py`: public Copernicus GLO-30 tile selection, atomic checksum-reusing downloads, GeoTIFF/XML validation, and tile manifests;
+- `src/ico_model/svtm_package.py`: guarded resumable acquisition, ZIP safety inspection, selected-member extraction, and analytical content-report validation for the official SVTM bulk delivery;
 - `scripts/acquire_sources.py`: live endpoint acquisition and provenance manifest CLI;
 - `scripts/probe_sources.py`: ArcGIS source topology/CRS/extent probe;
 - `scripts/select_terrain_source.py`: DEM sidecar selection and provenance-report CLI;
@@ -30,10 +31,11 @@ are:
 - `scripts/validate_vector_artifacts.py`: acquisition-manifest and per-layer artifact validation CLI;
 - `scripts/generate_precomputed_routes.py`: static route-asset generation CLI for a validated normalized-grid bundle;
 - `scripts/acquire_copernicus_dem.py`: persistent-storage Copernicus fallback acquisition CLI;
+- `scripts/acquire_svtm_package.py`: persistent-storage SVTM bulk-package acquisition and validation CLI;
 - `scripts/cleanup_acquisition_storage.py`: dry-run-first cleanup for abandoned acquisition directories;
 - `config/model.json`: S1 endpoints, seven sensitivity components, normalization, and approved sensitivity presets;
 - `pyproject.toml`: minimal dependency-free Python package metadata;
-- `tests/`: sixty-six standard-library unit tests covering cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, DEM acquisition/validation, terrain selection, precomputed route assets, and acquisition cleanup;
+- `tests/`: seventy-seven standard-library unit tests covering cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, DEM acquisition/validation, terrain selection, precomputed route assets, SVTM package safeguards, and acquisition cleanup;
 - `benchmarks/benchmark_routing.py` and `benchmarks/results.json`: reproducible proxy benchmark;
 - `docs/ANALYTICAL_MODEL.md`: model semantics, evidence, and current execution boundary.
 
@@ -50,14 +52,17 @@ streaming output, tiled object-ID inventories, retries, persistent page caching,
 resumption, and explicit storage limits. No raw source artifacts are tracked in Git.
 Hydroline is now fully captured and independently validated in persistent external
 storage. SVTM is partially cached but has no published artifact after repeated
-service failures; the original temporary files from the disk incident were deleted,
-so the project cannot attribute that incident definitively.
+service failures. The official Data.NSW/SEED bulk-package path is configured as an
+acquisition-engineering alternative for the same approved C2.0.M2.2 release, but its
+endpoint currently returns an HTTP 202 web challenge and its analytical contents
+could not be inspected. The package is not accepted as model input without a
+reader-produced content report reconciling geometry, CRS, attributes, S1 coverage,
+and the known REST count.
 
-The approved public Copernicus GLO-30 fallback acquisition and tile validation were
-implemented and successfully exercised before temporary staging was cleared. No
-DEM artifact is currently present; the reproducible command writes to the persistent
-external path documented in `docs/ACQUISITION_OPERATIONS.md`. No raster pixels have
-been processed into an analysis grid.
+The approved public Copernicus GLO-30 fallback is now restored at
+`data/external/dem/copernicus-glo30-s1/`: four EPSG:4326 one-arcsecond tiles,
+complete S1 coverage, validated XML nodata `-32767`, and 160,523,100 bytes including
+metadata. No raster pixels have been processed into an analysis grid.
 
 The hidden `.agents` and `.codex` directories are empty in the inspected workspace.
 There is no README yet; the source tree, executable benchmark, package manifest, and
@@ -134,11 +139,9 @@ and representative live endpoints. The following inputs remain unresolved:
   hydrography-area captures are verified externally. The bounded vector adapter,
   staged streaming writer, and source-specific page-size policy are implemented
   while raw captures remain outside version control;
-- actual persistent ELVIS/NSW DEM acquisition and local artifact availability;
-  Copernicus GLO-30 is the implemented public fallback if the primary artifact is
-  unavailable or invalid, but its temporary test capture was cleared;
-- reliable resumption of SVTM materialization after current ArcGIS service failures;
-  the validated page-250 cache is retained in persistent storage;
+- analytical SVTM bulk-package contents and reliable acquisition from the current
+  Data.NSW/SEED endpoint; its persistent state records an HTTP 202 web challenge;
+  the validated page-250 REST cache remains available only as fallback/validation;
 - normalization details;
 - routing grid resolution;
 - geographic source coverage and data-quality validation;
@@ -156,7 +159,7 @@ No hosting provider is selected as a confirmed implementation decision.
 
 Verified on 13 September 2026:
 
-- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 63 tests passed after the acquisition-safety and DEM changes;
+- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 77 tests passed after the SVTM package safeguards and persistent DEM restoration;
 - `PYTHONPATH=src python3 benchmarks/benchmark_routing.py --sizes 128 256 512` — completed and retained in `benchmarks/results.json`;
 - `PYTHONPATH=src python3 scripts/acquire_sources.py --output <temporary manifest> --timeout 20` — live GA endpoint acquisition succeeded; the manifest was written outside the repository;
 - `PYTHONPATH=src python3 scripts/probe_sources.py --output <temporary report> --timeout 20` — live probe validated GA, NPWS, SVTM, hydrography, and transport, and reported the configured terrain services as deferred/no-raster;
@@ -176,7 +179,9 @@ Verified on 13 September 2026:
 - Hydroline validation independently confirmed 68,320 unique features, 355 pages, 16 tiles, and 965 tiled-inventory overlaps reconciled. The persistent final bundle is 105,232,759 bytes and its cache namespace is 108,584,694 bytes.
 - Full SVTM acquisition first exceeded the unchanged 32 MB response ceiling at 1,000 features/page. The page size was reduced to 250 based on observed response size; the largest captured page was 28,080,441 bytes. The run reached 190 validated pages, 1,159,268,449 bytes of page cache, and a 333,452,505-byte peak staged artifact before repeated ArcGIS failures; no SVTM artifact was published.
 - The largest observed combined Hydroline/SVTM working set was approximately 1.60 GB, below the unchanged 12 GB limit; persistent `df -h .` checks retained at least 912 GB free during capture.
-- `PYTHONPATH=src python3 scripts/acquire_copernicus_dem.py --output-dir /tmp/ico-dem-glo30-s1 --timeout 120 --max-retries 3 --backoff 1` — successfully acquired and validated four public GLO-30 tiles covering S1 in temporary external storage; that temporary artifact was subsequently cleared during incident response and is not current repository data.
+- `df -h .` — persistent project storage reported 911 GB available before DEM restoration.
+- `PYTHONPATH=src python3 scripts/acquire_copernicus_dem.py --output-dir data/external/dem/copernicus-glo30-s1 --timeout 120 --max-retries 3 --backoff 1` — restored four public GLO-30 tiles covering S1; the persistent artifact is 160,523,100 bytes and passed the terrain artifact validator.
+- `PYTHONPATH=src python3 scripts/acquire_svtm_package.py --cache-dir data/cache/seed/svtm-c2.0.m2.2 --output-dir data/external/vectors/svtm-package --timeout 15 --max-retries 0` — bounded package probe wrote only a 423-byte persistent state record and failed safely on the official endpoint's HTTP 202 web challenge; no archive bytes were materialized.
 
 No linting, type-check, frontend build, full geographic data-validation, or deployment
 verification exists yet. Git status and diff checks are available and are run before
@@ -203,12 +208,12 @@ and hydrography-area captures, artifact-integrity gate, and source-preserving ve
 schema normalization are verified. Hydrography-line is now fully materialized and
 independently validated. The approved SVTM feature layer is configured and
 topology-validated but remains only partially cached because upstream service
-requests failed repeatedly after 190 validated pages. Full high-volume materialization
-is currently paused by upstream SVTM service reliability after the accepted storage
-audit. The next connected work after that boundary
-is DEM/raster-vector derivation and aligned grid construction, followed by route
-assessment and the three geographic offline routes. The route-asset execution
-boundary is implemented and tested, but no geographic route is claimed. No frontend
-implementation should precede those data and model checks. Geographic grid derivation
-remains blocked until SVTM is complete and the persistent DEM artifact is reacquired
-and validated.
+requests failed repeatedly after 190 validated pages. The official bulk delivery has
+been verified as the same named release/licensed dataset in official metadata, but
+not as analytical vector content: the published page describes the supplied package
+as MXD/layer-file symbology, and the direct resource is currently WAF-challenged.
+The next connected work is therefore blocked at SVTM acquisition/content
+verification, not DEM storage. Once SVTM is complete and independently validated,
+the next work is raster/vector derivation and aligned geographic grid construction,
+followed by route assessment and the three geographic offline routes. No geographic
+route is claimed.
