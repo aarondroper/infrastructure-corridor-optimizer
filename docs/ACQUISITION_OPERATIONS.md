@@ -12,7 +12,9 @@ repository working directory:
 - `data/external/vectors/` — final staged-and-published ArcGIS feature artifacts and
   the compact `acquisition_manifest.json`;
 - `data/cache/arcgis/` — resumable page caches, under fixed
-  `<source-id>--<component>/tile-####-page-#####.json` namespaces;
+  `<source-id>--<component>--page-<page-size>/tile-####-page-#####.json`
+  namespaces; the page size is part of the namespace so incompatible page
+  batches cannot be resumed accidentally;
 - `data/external/dem/copernicus-glo30-s1/` — Copernicus GeoTIFF/XML tiles and
   `dem_manifest.json`.
 
@@ -130,7 +132,10 @@ the DEM command: valid existing tiles are checksum-reused and no manifest is
 published until every tile validates.
 
 Future full captures should be run one component at a time from persistent roots,
-with the same cache root retained for resume. The safe vector workflow is:
+with the same cache root retained for resume. SVTM uses a measured 250-feature
+page size because a 1,000-feature request exceeded the unchanged 32 MB response
+ceiling; the largest observed 250-feature page was 28.1 MB. The safe vector
+workflow is:
 
 ```bash
 PYTHONPATH=src python3 scripts/acquire_vector_sources.py \
@@ -142,5 +147,16 @@ PYTHONPATH=src python3 scripts/acquire_vector_sources.py \
 
 If interrupted after validated pages are cached, rerun the identical command with
 `--resume`. Do not create a new cache directory unless intentionally starting a
-new source snapshot, and clean the old namespace afterward. Full SVTM and Hydroline
-materialization remain paused pending owner review of this audit.
+new source snapshot, and clean the old namespace afterward. To remove one known
+abandoned namespace without scanning or touching sibling captures, use the
+explicit `--cache-namespace <path>` cleanup option; review its dry-run output
+before adding `--delete`. The current SVTM run has 190 validated cached pages but
+no published artifact because the service subsequently returned repeated HTTP 500
+and timeout/HTTP 400 failures during tiled inventory. It is resumable with:
+
+```bash
+PYTHONPATH=src python3 scripts/acquire_vector_sources.py \
+  --source-id nsw-svtm --component native_vegetation \
+  --output-dir data/external/vectors/s1-native-vegetation-final \
+  --cache-dir data/cache/arcgis/s1 --timeout 30 --resume
+```

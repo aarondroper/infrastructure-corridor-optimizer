@@ -40,7 +40,7 @@ class ModelConfigTests(unittest.TestCase):
         self.assertEqual(source["service_crs_epsg"], 3308)
         self.assertEqual(source["acquisition_layers"][0]["component"], "native_vegetation")
         self.assertEqual(source["acquisition_layers"][0]["layer_id"], 3)
-        self.assertEqual(source["acquisition_layers"][0]["page_size"], 1000)
+        self.assertEqual(source["acquisition_layers"][0]["page_size"], 250)
         self.assertIn("PCTID", source["acquisition_layers"][0]["out_fields"])
 
     def test_terrain_policy_has_ordered_sources_and_explicit_crs(self):

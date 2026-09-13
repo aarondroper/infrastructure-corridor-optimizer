@@ -526,7 +526,7 @@ def acquire(
                 output_crs,
                 layer_page_size,
                 tile_size_degrees=_tile_size_degrees(config, source),
-                cache_namespace=f"{source['id']}--{layer['component']}",
+                cache_namespace=f"{source['id']}--{layer['component']}--page-{layer_page_size}",
                 safety_limits=_acquisition_safety(config),
             )
             acquired_layers.append(
@@ -757,7 +757,7 @@ def stream_acquisition(
                         on_end=end,
                         tile_size_degrees=_tile_size_degrees(config, source),
                         cache_dir=cache_dir,
-                        cache_namespace=f"{source['id']}--{layer['component']}",
+                        cache_namespace=f"{source['id']}--{layer['component']}--page-{layer_page_size}",
                         resume=resume,
                         safety_limits=safety_limits,
                         on_page_complete=page_complete,

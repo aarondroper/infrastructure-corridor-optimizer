@@ -79,11 +79,11 @@ Turn the approved study scenario and sources into a transparent, testable routin
 
 ## Priority 3 — Reproducible Data and Routing Pipeline
 
-**Status:** Active, with large live source capture paused after a disk-usage
-incident audit. The normalized-grid-to-route asset boundary and disk-safe source
-acquisition boundary are implemented and tested. This milestone still needs
-source-complete geographic derivation and must feed validated geographic grids into
-that boundary.
+**Status:** Active. Hydroline is complete and independently validated; the SVTM
+page-250 cache is partial after repeated upstream ArcGIS failures. The
+normalized-grid-to-route asset boundary and disk-safe source acquisition boundary
+are implemented and tested. This milestone still needs source-complete geographic
+derivation and must feed validated geographic grids into that boundary.
 
 ### Objective
 
@@ -91,7 +91,8 @@ Implement the full offline Python workflow from source acquisition through route
 
 ### Major Deliverables
 
-- reproducible acquisition of approved datasets;
+- reproducible acquisition of approved datasets (Hydroline complete; SVTM resumable
+  but currently upstream-blocked);
 - bounded persistent-storage acquisition with response/page/feature/storage limits,
   resumable page caches, and abandoned-cache cleanup;
 - terrain-source selection using ELVIS/NSW as primary and Copernicus GLO-30 as the

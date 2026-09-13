@@ -33,7 +33,7 @@ are:
 - `scripts/cleanup_acquisition_storage.py`: dry-run-first cleanup for abandoned acquisition directories;
 - `config/model.json`: S1 endpoints, seven sensitivity components, normalization, and approved sensitivity presets;
 - `pyproject.toml`: minimal dependency-free Python package metadata;
-- `tests/`: sixty-three standard-library unit tests covering cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, DEM acquisition/validation, terrain selection, and precomputed route assets;
+- `tests/`: sixty-six standard-library unit tests covering cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, DEM acquisition/validation, terrain selection, precomputed route assets, and acquisition cleanup;
 - `benchmarks/benchmark_routing.py` and `benchmarks/results.json`: reproducible proxy benchmark;
 - `docs/ANALYTICAL_MODEL.md`: model semantics, evidence, and current execution boundary.
 
@@ -47,12 +47,11 @@ There is still no verified evidence of:
 The feasibility record remains source evidence and scenario context. Source acquisition
 is implemented for fixed endpoints and bounded ArcGIS vector layers, with staged
 streaming output, tiled object-ID inventories, retries, persistent page caching,
-resumption, and explicit storage limits. Live end-to-end captures for NPWS Estate,
-roads, hydrography area, and rail were previously verified only in external storage;
-no raw source artifacts are tracked in Git. Current count-only probes returned
-216,808 SVTM and 68,320 Hydroline features in S1, but full SVTM/Hydroline
-materialization is paused after a local disk-usage incident. The original temporary
-files were deleted, so the project cannot attribute the incident definitively.
+resumption, and explicit storage limits. No raw source artifacts are tracked in Git.
+Hydroline is now fully captured and independently validated in persistent external
+storage. SVTM is partially cached but has no published artifact after repeated
+service failures; the original temporary files from the disk incident were deleted,
+so the project cannot attribute that incident definitively.
 
 The approved public Copernicus GLO-30 fallback acquisition and tile validation were
 implemented and successfully exercised before temporary staging was cleared. No
@@ -130,16 +129,16 @@ are not implemented.
 Feasibility research has been performed against official source catalogues/services
 and representative live endpoints. The following inputs remain unresolved:
 
-- full external capture of the 68,320-feature hydrography-line layer and the
-  approximately 216,808-feature native-vegetation layer; the road and
+- full external capture of the approximately 216,808-feature native-vegetation
+  layer; Hydroline is complete at 68,320 unique features. The road and
   hydrography-area captures are verified externally. The bounded vector adapter,
   staged streaming writer, and source-specific page-size policy are implemented
   while raw captures remain outside version control;
 - actual persistent ELVIS/NSW DEM acquisition and local artifact availability;
   Copernicus GLO-30 is the implemented public fallback if the primary artifact is
   unavailable or invalid, but its temporary test capture was cleared;
-- disk-safe resumption of full SVTM/Hydroline materialization after review of
-  `docs/ACQUISITION_OPERATIONS.md`; large live acquisition is intentionally paused;
+- reliable resumption of SVTM materialization after current ArcGIS service failures;
+  the validated page-250 cache is retained in persistent storage;
 - normalization details;
 - routing grid resolution;
 - geographic source coverage and data-quality validation;
@@ -173,7 +172,10 @@ Verified on 13 September 2026:
 - JSON configuration and benchmark output parse successfully through the Python standard library.
 - `PYTHONPATH=src:. python3 scripts/generate_precomputed_routes.py --grid-bundle <temporary bundle> --output-dir <temporary directory>` — generated shortest, balanced, and environmental route assets and a manifest from a deterministic normalized-grid fixture.
 - `PYTHONPATH=src python3 scripts/probe_sources.py --output /tmp/ico-source-probe-svtm.json --timeout 30` — live topology probe validated the configured SVTM ArcGIS feature service and layer metadata at EPSG:3308; no full SVTM artifact was published.
-- bounded count-only probes returned 216,808 SVTM and 68,320 Hydroline features; 20-feature geometry samples measured approximately 8.1 KB and 0.77 KB per serialized feature respectively. No full high-volume artifact was published.
+- bounded count-only probes returned 216,808 SVTM and 68,320 Hydroline features; 20-feature geometry samples measured approximately 8.1 KB and 0.77 KB per serialized feature respectively. No full SVTM artifact was published.
+- Hydroline validation independently confirmed 68,320 unique features, 355 pages, 16 tiles, and 965 tiled-inventory overlaps reconciled. The persistent final bundle is 105,232,759 bytes and its cache namespace is 108,584,694 bytes.
+- Full SVTM acquisition first exceeded the unchanged 32 MB response ceiling at 1,000 features/page. The page size was reduced to 250 based on observed response size; the largest captured page was 28,080,441 bytes. The run reached 190 validated pages, 1,159,268,449 bytes of page cache, and a 333,452,505-byte peak staged artifact before repeated ArcGIS failures; no SVTM artifact was published.
+- The largest observed combined Hydroline/SVTM working set was approximately 1.60 GB, below the unchanged 12 GB limit; persistent `df -h .` checks retained at least 912 GB free during capture.
 - `PYTHONPATH=src python3 scripts/acquire_copernicus_dem.py --output-dir /tmp/ico-dem-glo30-s1 --timeout 120 --max-retries 3 --backoff 1` — successfully acquired and validated four public GLO-30 tiles covering S1 in temporary external storage; that temporary artifact was subsequently cleared during incident response and is not current repository data.
 
 No linting, type-check, frontend build, full geographic data-validation, or deployment
@@ -198,12 +200,15 @@ and the decision log; the selector does not silently substitute an unconfigured 
 Priority 3 is active. The terrain source policy, local artifact contract, bounded
 ArcGIS vector acquisition boundary, staged streaming publication path, external road
 and hydrography-area captures, artifact-integrity gate, and source-preserving vector
-schema normalization are verified. The approved SVTM feature layer is configured and
-topology-validated but remains unmaterialized because its S1 envelope is large and
-full capture has not completed; hydrography-line capture is also unmaterialized.
-Full high-volume materialization is currently paused pending owner review of the
-storage audit and safe-resume workflow. The next connected work after that boundary
+schema normalization are verified. Hydrography-line is now fully materialized and
+independently validated. The approved SVTM feature layer is configured and
+topology-validated but remains only partially cached because upstream service
+requests failed repeatedly after 190 validated pages. Full high-volume materialization
+is currently paused by upstream SVTM service reliability after the accepted storage
+audit. The next connected work after that boundary
 is DEM/raster-vector derivation and aligned grid construction, followed by route
 assessment and the three geographic offline routes. The route-asset execution
 boundary is implemented and tested, but no geographic route is claimed. No frontend
-implementation should precede those data and model checks.
+implementation should precede those data and model checks. Geographic grid derivation
+remains blocked until SVTM is complete and the persistent DEM artifact is reacquired
+and validated.

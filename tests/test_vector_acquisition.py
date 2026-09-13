@@ -200,7 +200,7 @@ class VectorAcquisitionTests(unittest.TestCase):
         layer = bundle["sources"][0]["layers"][0]
         self.assertEqual(layer["component"], "native_vegetation")
         self.assertEqual(layer["source_crs_epsg"], 3308)
-        self.assertEqual(layer["query"]["page_size"], 1000)
+        self.assertEqual(layer["query"]["page_size"], 250)
 
     def test_spatial_chunking_records_complete_tile_inventory(self):
         config = load_config()
@@ -228,7 +228,9 @@ class VectorAcquisitionTests(unittest.TestCase):
             with self.assertRaises(SourceAccessError):
                 stream_acquisition(config, client, output_dir, cache_dir=cache_dir)
             self.assertTrue(
-                (cache_dir / "nsw-npws-estate--protected_land" / "tile-0000-page-00000.json").is_file()
+                (
+                    cache_dir / "nsw-npws-estate--protected_land--page-1" / "tile-0000-page-00000.json"
+                ).is_file()
             )
             manifest_path = stream_acquisition(
                 config, client, output_dir, cache_dir=cache_dir, resume=True

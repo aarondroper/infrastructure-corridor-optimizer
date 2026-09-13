@@ -36,25 +36,38 @@ def _candidates(root: Path, older_than_seconds: float, *, staging_only: bool) ->
     )
 
 
+def _explicit_candidate(path: Path, older_than_seconds: float) -> list[Path]:
+    """Return one explicitly named cache namespace when it is old enough."""
+
+    if not path.is_dir():
+        return []
+    if time.time() - path.stat().st_mtime < older_than_seconds:
+        return []
+    return [path]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cache-dir", type=Path, default=Path("data/cache/arcgis"))
+    parser.add_argument(
+        "--cache-namespace",
+        type=Path,
+        help="target one exact cache namespace instead of scanning cache-dir children",
+    )
     parser.add_argument("--output-root", type=Path, default=Path("data/external/vectors"))
     parser.add_argument("--older-than-hours", type=float, default=24.0)
     parser.add_argument("--delete", action="store_true", help="delete listed candidates")
     args = parser.parse_args()
     if args.older_than_hours < 0:
         raise ValueError("--older-than-hours must be non-negative")
-    roots = [_safe_root(args.cache_dir), _safe_root(args.output_root)]
+    cache_root = _safe_root(args.cache_namespace or args.cache_dir)
+    output_root = _safe_root(args.output_root)
     candidates = []
-    for root in roots:
-        candidates.extend(
-            _candidates(
-                root,
-                args.older_than_hours * 3600,
-                staging_only=root == roots[1],
-            )
-        )
+    if args.cache_namespace:
+        candidates.extend(_explicit_candidate(cache_root, args.older_than_hours * 3600))
+    else:
+        candidates.extend(_candidates(cache_root, args.older_than_hours * 3600, staging_only=False))
+    candidates.extend(_candidates(output_root, args.older_than_hours * 3600, staging_only=True))
     for path in candidates:
         action = "removing" if args.delete else "would remove"
         print(f"{action} {path}")

@@ -75,7 +75,7 @@
         {"id": 3, "name": "Plant Community Type with labels", "geometry_type": "esriGeometryPolygon"}
       ],
       "acquisition_layers": [
-        {"layer_id": 3, "component": "native_vegetation", "geometry_type": "esriGeometryPolygon", "page_size": 1000, "out_fields": ["OBJECTID", "PCTID", "PCTName", "vegClass", "vegForm", "form_PCT", "Shape_Area"]}
+        {"layer_id": 3, "component": "native_vegetation", "geometry_type": "esriGeometryPolygon", "page_size": 250, "out_fields": ["OBJECTID", "PCTID", "PCTName", "vegClass", "vegForm", "form_PCT", "Shape_Area"]}
       ]
     },
     {

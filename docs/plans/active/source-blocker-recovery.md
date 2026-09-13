@@ -64,5 +64,16 @@ temporary runs, unusually high overlap, or another process remain possible.
 Implemented safeguards are documented in `docs/ACQUISITION_OPERATIONS.md`: default
 persistent paths, temporary-path refusal in production CLIs, explicit path reporting,
 pre-download inventory limits, response/page/storage limits, byte counters in query
-metadata, separate output/cache roots, and dry-run-first abandoned-directory cleanup.
-Full SVTM and Hydroline capture remains intentionally paused.
+metadata, separate output/cache roots, page-size-specific cache namespaces, and
+dry-run-first abandoned-directory cleanup with exact namespace targeting.
+
+Hydroline was subsequently acquired and independently validated on 13 September
+2026: 68,320 unique features, 355 pages across 16 tiles, 965 tiled inventory
+overlaps reconciled, 105.2 MB final bundle, and 108.6 MB persistent cache. SVTM
+was restarted with an evidence-based 250-feature page size after a 1,000-feature
+request exceeded the 32 MB response ceiling. It reached 190 validated pages and
+approximately 1.16 GB of page cache / 333.5 MB staged output before a repeated
+ArcGIS 500 and later bounded probes returned HTTP 400/timeouts. No SVTM artifact
+was published; the page-250 cache is retained for resumable continuation. Full
+SVTM capture and geographic derivation remain blocked by current source-service
+reliability, not by observed storage pressure.
