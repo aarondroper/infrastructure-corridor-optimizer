@@ -87,6 +87,9 @@ topology guards. The CLIs in `scripts/acquire_sources.py` and
 `scripts/probe_sources.py` write small provenance and source-topology reports.
 `ico_model.vector_artifacts` and `scripts/validate_vector_artifacts.py` validate
 external acquisition manifests and per-layer artifacts before downstream processing.
+`ico_model.vector_schema` provides explicit, source-preserving canonical aliases for
+all seven configured vector components; it does not assign analytical costs or
+weights.
 `ico_model.terrain` and `scripts/select_terrain_source.py` validate local DEM sidecars
 and select the configured ELVIS/NSW primary or Copernicus GLO-30 fallback with
 provenance. Actual portal acquisition, raster-pixel reading, and reprojection remain

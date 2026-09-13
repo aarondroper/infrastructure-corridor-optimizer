@@ -19,6 +19,7 @@ are:
 - `src/ico_model/routing.py`: deterministic eight-neighbor A* and Dijkstra routing;
 - `src/ico_model/sources.py`: bounded ArcGIS REST access and endpoint validation;
 - `src/ico_model/vector_artifacts.py`: external vector-manifest and artifact integrity validation;
+- `src/ico_model/vector_schema.py`: source-preserving canonical schemas for the seven vector components;
 - `src/ico_model/terrain.py`: local DEM sidecar validation and explicit primary/fallback selection;
 - `scripts/acquire_sources.py`: live endpoint acquisition and provenance manifest CLI;
 - `scripts/probe_sources.py`: ArcGIS source topology/CRS/extent probe;
@@ -27,7 +28,7 @@ are:
 - `scripts/validate_vector_artifacts.py`: acquisition-manifest and per-layer artifact validation CLI;
 - `config/model.json`: S1 endpoints, seven sensitivity components, normalization, and approved sensitivity presets;
 - `pyproject.toml`: minimal dependency-free Python package metadata;
-- `tests/`: thirty-nine standard-library unit tests covering cost, configuration, routing, source acquisition, vector acquisition, artifact validation, and terrain selection behavior;
+- `tests/`: forty-three standard-library unit tests covering cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, and terrain selection behavior;
 - `benchmarks/benchmark_routing.py` and `benchmarks/results.json`: reproducible proxy benchmark;
 - `docs/ANALYTICAL_MODEL.md`: model semantics, evidence, and current execution boundary.
 
@@ -42,7 +43,8 @@ The feasibility record remains source evidence and scenario context. Source acqu
 is implemented for fixed endpoints and bounded ArcGIS vector layers, with staged
 streaming output and live end-to-end captures verified for NPWS Estate, roads,
 hydrography area, and the railway layer into `/tmp` only. The resulting external
-manifests and artifacts can be checked by a separate dependency-free integrity gate.
+manifests and artifacts can be checked by a separate dependency-free integrity gate
+and normalized into a source-preserving canonical feature schema.
 Terrain source selection has an explicit, tested local-artifact boundary, but no DEM
 has been acquired into this repository and no raster pixels have been processed.
 
@@ -139,7 +141,7 @@ No hosting provider is selected as a confirmed implementation decision.
 
 Verified on 13 September 2026:
 
-- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 39 tests passed;
+- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 43 tests passed;
 - `PYTHONPATH=src python3 benchmarks/benchmark_routing.py --sizes 128 256 512` — completed and retained in `benchmarks/results.json`;
 - `PYTHONPATH=src python3 scripts/acquire_sources.py --output <temporary manifest> --timeout 20` — live GA endpoint acquisition succeeded; the manifest was written outside the repository;
 - `PYTHONPATH=src python3 scripts/probe_sources.py --output <temporary report> --timeout 20` — live probe validated GA, NPWS, hydrography, and transport; deferred SVTM WMS and reported the NSW elevation no-raster limitation;
@@ -149,6 +151,7 @@ Verified on 13 September 2026:
 - `PYTHONPATH=src python3 scripts/acquire_vector_sources.py --source-id nsw-transport --component railways --output-dir <temporary directory> --timeout 30` — acquired 415 railway features in three complete pages;
 - `PYTHONPATH=src python3 scripts/validate_vector_artifacts.py --manifest <temporary road manifest> --output <temporary report>` — validated 46,092 road features, one layer, and EPSG:7856;
 - `PYTHONPATH=src python3 scripts/validate_vector_artifacts.py --manifest <temporary hydrography-area manifest> --output <temporary report>` — validated 12,652 hydrography-area features, one layer, and EPSG:7856;
+- `PYTHONPATH=src python3 -c '<canonical normalization check>'` — normalized all 46,092 road and 12,652 hydrography-area features from the external validated artifacts with unique stable IDs and preserved source attributes;
 - the hydrography capture was attempted after resolving sparse child-layer metadata, but the public service stalled during a later page; interruption removed the staged output and no manifest was published;
 - the benchmark produced equal A*/Dijkstra path costs and fewer explored cells for A* at all three sizes;
 - JSON configuration and benchmark output parse successfully through the Python standard library.
@@ -174,9 +177,9 @@ and the decision log; the selector does not silently substitute an unconfigured 
 
 Priority 3 is active. The terrain source policy, local artifact contract, bounded
 ArcGIS vector acquisition boundary, staged streaming publication path, external road
-and hydrography-area captures, and artifact-integrity gate are verified. Hydrography-
-line capture remains unmaterialized because the public service stalled during a full
-capture attempt. The next connected work is source-schema normalization around the
-validated external artifacts, followed by DEM/raster-vector derivation, aligned grids,
-route assessment, and the three offline routes. No frontend implementation should
-precede those data and model checks.
+and hydrography-area captures, artifact-integrity gate, and source-preserving vector
+schema normalization are verified. Hydrography-line capture remains unmaterialized
+because the public service stalled during a full capture attempt. The next connected
+work is DEM/raster-vector derivation and aligned grid construction around the
+validated inputs, followed by route assessment and the three offline routes. No
+frontend implementation should precede those data and model checks.

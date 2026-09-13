@@ -20,6 +20,11 @@ from .terrain import (
     validate_terrain_artifact,
 )
 from .vector_artifacts import validate_vector_manifest
+from .vector_schema import (
+    COMPONENT_FIELD_ALIASES,
+    normalize_feature,
+    normalize_feature_collection,
+)
 
 __all__ = [
     "NoPathError",
@@ -41,4 +46,7 @@ __all__ = [
     "select_terrain_artifact",
     "validate_terrain_artifact",
     "validate_vector_manifest",
+    "COMPONENT_FIELD_ALIASES",
+    "normalize_feature",
+    "normalize_feature_collection",
 ]
