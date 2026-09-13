@@ -1,0 +1,114 @@
+{
+  "status": "p2-approved-sensitivity-presets",
+  "scenario": "S1",
+  "study_context": "Upper Hunter to Lake Macquarie / Eraring-area corridor context",
+  "source_snapshot_date": "2026-09-13",
+  "source_crs_epsg": 7844,
+  "analysis_crs_epsg": 7856,
+  "sources": [
+    {
+      "id": "ga-electricity-infrastructure",
+      "role": "fixed endpoints and infrastructure context",
+      "url": "https://services.ga.gov.au/gis/rest/services/Electricity_Infrastructure/MapServer",
+      "access": "ArcGIS REST",
+      "crs_epsg": 7844
+    },
+    {
+      "id": "energyco-hunter-transmission-context",
+      "role": "planning context only",
+      "url": "https://energyco.nsw.gov.au/our-projects/hunter-transmission-project/corridor-selection",
+      "access": "project web page"
+    },
+    {
+      "id": "nsw-elevation",
+      "role": "terrain source candidate",
+      "url": "https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Elevation_and_Depth_Theme_multiCRS/FeatureServer",
+      "access": "ArcGIS REST"
+    },
+    {
+      "id": "nsw-npws-estate",
+      "role": "protected-land source candidate",
+      "url": "https://mapprod3.environment.nsw.gov.au/arcgis/rest/services/EDP/Estate/MapServer/0",
+      "access": "ArcGIS REST"
+    },
+    {
+      "id": "nsw-svtm",
+      "role": "native-vegetation source candidate",
+      "url": "https://mapprod3.environment.nsw.gov.au/arcgis/services/VIS/SVTM_NSW_Extant_PCT/MapServer/WMSServer",
+      "access": "WMS"
+    },
+    {
+      "id": "nsw-hydrography",
+      "role": "hydrography source candidate",
+      "url": "https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Hydrography/MapServer",
+      "access": "ArcGIS REST"
+    },
+    {
+      "id": "nsw-transport",
+      "role": "road and railway source candidate",
+      "url": "https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Transport_Theme_multiCRS/FeatureServer",
+      "access": "ArcGIS REST"
+    }
+  ],
+  "candidate_grid_resolutions_m": [50, 100, 150],
+  "provisional_processing_envelope_gda2020": {
+    "west": 150.82,
+    "south": -33.15,
+    "east": 151.62,
+    "north": -32.27
+  },
+  "endpoints": {
+    "origin": {
+      "name": "Bayswater",
+      "source_layer": "Geoscience Australia Electricity Infrastructure / Major Power Stations",
+      "source_object_id": 251,
+      "source_global_id": "{C9FF8896-AD16-4CA1-8A5B-B689CE0DD4A9}",
+      "status": "Operational",
+      "locality": "MUSWELLBROOK",
+      "state": "NSW",
+      "generation_capacity_mw": 2640.0,
+      "latitude": -32.39525728,
+      "longitude": 150.94913566
+    },
+    "destination": {
+      "name": "Eraring",
+      "source_layer": "Geoscience Australia Electricity Infrastructure / Major Power Stations",
+      "source_object_id": 286,
+      "source_global_id": "{9FF6397A-0DE6-494F-838C-8C409F9E3A09}",
+      "status": "Operational",
+      "locality": "ERARING",
+      "state": "NSW",
+      "generation_capacity_mw": 2880.0,
+      "latitude": -33.06206226,
+      "longitude": 151.52065341
+    }
+  },
+  "components": [
+    {"id": "length", "role": "base movement cost", "treatment": "ordinary cost"},
+    {"id": "terrain", "role": "DEM-derived slope difficulty", "treatment": "weighted penalty", "source_id": "nsw-elevation"},
+    {"id": "protected_land", "role": "NPWS Estate indicator", "treatment": "weighted penalty", "source_id": "nsw-npws-estate"},
+    {"id": "native_vegetation", "role": "SVTM sensitivity indicator", "treatment": "weighted penalty", "source_id": "nsw-svtm"},
+    {"id": "hydrography", "role": "watercourse / water-area crossing", "treatment": "weighted penalty", "source_id": "nsw-hydrography"},
+    {"id": "roads", "role": "road crossing difficulty", "treatment": "weighted penalty", "source_id": "nsw-transport"},
+    {"id": "railways", "role": "railway crossing difficulty", "treatment": "weighted penalty", "source_id": "nsw-transport"}
+  ],
+  "sensitivity_presets": {
+    "shortest": {
+      "description": "Strong preference for a short route while retaining visible constraint trade-offs.",
+      "weights": {"length": 0.85, "terrain": 0.05, "protected_land": 0.02, "native_vegetation": 0.02, "hydrography": 0.03, "roads": 0.015, "railways": 0.015}
+    },
+    "balanced": {
+      "description": "Moderates length against terrain, environmental sensitivity, and crossings.",
+      "weights": {"length": 0.45, "terrain": 0.15, "protected_land": 0.12, "native_vegetation": 0.12, "hydrography": 0.08, "roads": 0.04, "railways": 0.04}
+    },
+    "environmental": {
+      "description": "Prioritizes lower environmental sensitivity while retaining a length control.",
+      "weights": {"length": 0.25, "terrain": 0.10, "protected_land": 0.25, "native_vegetation": 0.25, "hydrography": 0.10, "roads": 0.025, "railways": 0.025}
+    }
+  },
+  "normalization": {
+    "terrain_slope_degrees": {"method": "linear_clamp", "lower": 0.0, "upper": 20.0, "status": "provisional"},
+    "binary_indicators": {"method": "0 outside / 1 inside", "status": "provisional"},
+    "crossing_penalties": {"method": "feature-class mapping plus route intersection assessment", "status": "provisional"}
+  }
+}

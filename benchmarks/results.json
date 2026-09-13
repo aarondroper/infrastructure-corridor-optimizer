@@ -1,0 +1,11 @@
+{
+  "benchmark": "deterministic-penalty-grid",
+  "records": [
+    {"size": 128, "algorithm": "astar", "runtime_ms": 27.427, "explored_cells": 8023, "path_cells": 184, "path_cost": 220.959415},
+    {"size": 128, "algorithm": "dijkstra", "runtime_ms": 42.146, "explored_cells": 16281, "path_cells": 184, "path_cost": 220.959415},
+    {"size": 256, "algorithm": "astar", "runtime_ms": 95.216, "explored_cells": 27635, "path_cells": 371, "path_cost": 450.540151},
+    {"size": 256, "algorithm": "dijkstra", "runtime_ms": 178.247, "explored_cells": 65032, "path_cells": 371, "path_cost": 450.540151},
+    {"size": 512, "algorithm": "astar", "runtime_ms": 446.791, "explored_cells": 111200, "path_cells": 746, "path_cost": 908.287409},
+    {"size": 512, "algorithm": "dijkstra", "runtime_ms": 891.189, "explored_cells": 260119, "path_cells": 746, "path_cost": 908.287409}
+  ]
+}
