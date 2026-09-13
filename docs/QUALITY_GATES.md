@@ -21,6 +21,7 @@ acquisition checks in addition to repository inventory and consistency checks:
 - `PYTHONPATH=src python3 scripts/acquire_sources.py --output <temporary manifest>` for live endpoint validation when network access is available;
 - `PYTHONPATH=src python3 scripts/select_terrain_source.py --primary-metadata <sidecar> [--fallback-metadata <sidecar>] --output <temporary report>` for local DEM artifact provenance and ordered fallback validation;
 - `PYTHONPATH=src python3 scripts/acquire_vector_sources.py --output-dir <temporary directory>` for bounded ArcGIS feature acquisition, CRS/geometry checks, and transfer-limit handling;
+- `PYTHONPATH=src python3 scripts/validate_vector_artifacts.py --manifest <manifest> --output <temporary report>` for external vector-manifest, artifact-count, CRS, geometry, and page-completeness validation;
 - `PYTHONPATH=src python3 benchmarks/benchmark_routing.py --sizes 128 256 512` for the current routing proxy benchmark;
 - direct review of all changed Markdown files;
 - `git status --short --branch`, `git diff --check`, and the relevant diff when a usable Git repository exists.

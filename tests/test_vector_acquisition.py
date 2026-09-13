@@ -4,7 +4,8 @@ import unittest
 from pathlib import Path
 
 from scripts.acquire_vector_sources import acquire, stream_acquisition, write_acquisition
-from ico_model.sources import SourceValidationError
+from ico_model.sources import SourceValidationError, write_manifest
+from ico_model.vector_artifacts import validate_vector_manifest
 
 
 def load_config():
@@ -157,6 +158,31 @@ class VectorAcquisitionTests(unittest.TestCase):
             with self.assertRaises(SourceValidationError):
                 stream_acquisition(config, client, output_dir, {"nsw-npws-estate"})
             self.assertEqual(list(output_dir.iterdir()), [])
+
+    def test_artifact_validator_reports_complete_written_bundle(self):
+        config = load_config()
+        bundle = acquire(config, FakeVectorClient())
+        with tempfile.TemporaryDirectory() as directory:
+            manifest_path = write_acquisition(bundle, Path(directory))
+            report = validate_vector_manifest(
+                manifest_path,
+                expected_scenario=config["scenario"],
+                expected_output_crs_epsg=config["analysis_crs_epsg"],
+            )
+            self.assertEqual(report["source_count"], 3)
+            self.assertEqual(report["layer_count"], 7)
+            self.assertEqual(report["feature_count"], 7)
+
+    def test_artifact_validator_rejects_manifest_count_mismatch(self):
+        config = load_config()
+        bundle = acquire(config, FakeVectorClient())
+        with tempfile.TemporaryDirectory() as directory:
+            manifest_path = write_acquisition(bundle, Path(directory))
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["sources"][0]["layers"][0]["feature_count"] += 1
+            write_manifest(manifest, manifest_path)
+            with self.assertRaisesRegex(SourceValidationError, "feature count"):
+                validate_vector_manifest(manifest_path)
 
 
 if __name__ == "__main__":

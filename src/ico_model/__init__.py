@@ -19,6 +19,7 @@ from .terrain import (
     select_terrain_artifact,
     validate_terrain_artifact,
 )
+from .vector_artifacts import validate_vector_manifest
 
 __all__ = [
     "NoPathError",
@@ -39,4 +40,5 @@ __all__ = [
     "load_terrain_artifact_metadata",
     "select_terrain_artifact",
     "validate_terrain_artifact",
+    "validate_vector_manifest",
 ]
