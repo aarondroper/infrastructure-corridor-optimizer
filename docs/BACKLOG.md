@@ -79,14 +79,11 @@ Turn the approved study scenario and sources into a transparent, testable routin
 
 ## Priority 3 — Reproducible Data and Routing Pipeline
 
-**Status:** Active. Hydroline and the approved Copernicus GLO-30 S1 DEM are complete
-and independently validated. SVTM REST capture remains partial after repeated
-upstream failures; a guarded official bulk-package path for the same C2.0.M2.2
-release is implemented, but its endpoint is currently WAF-challenged and its
-analytical contents are unverified. The normalized-grid-to-route asset boundary and
-disk-safe source acquisition boundary are implemented and tested. This milestone
-still needs source-complete geographic derivation and must feed validated geographic
-grids into that boundary.
+**Status:** Active. The complete approved S1 source stack, a real 100 m geographic
+grid, three offline A* routes, and preliminary GeoJSON/assessment assets are now
+verified in persistent ignored storage. Remaining Priority 3 work is feature-level
+crossing/route assessment refinement and compact application-asset packaging; the
+static frontend remains Priority 5.
 
 ### Objective
 
@@ -94,8 +91,8 @@ Implement the full offline Python workflow from source acquisition through route
 
 ### Major Deliverables
 
-- reproducible acquisition of approved datasets (Hydroline and Copernicus DEM
-  complete; SVTM REST partial and official bulk delivery pending content verification);
+- reproducible acquisition of approved datasets (Hydroline, Copernicus DEM, and
+  S1-windowed SVTM raster complete; remaining vector layers still required);
 - bounded persistent-storage acquisition with response/page/feature/storage limits,
   resumable page caches, and abandoned-cache cleanup;
 - terrain-source selection using ELVIS/NSW as primary and Copernicus GLO-30 as the
@@ -108,6 +105,10 @@ Implement the full offline Python workflow from source acquisition through route
 - provenance/configuration metadata;
 - clear error handling for missing or invalid inputs;
 - automated tests for core analytical logic.
+
+The first geographic execution slice satisfies the source/grid/route deliverables
+with the provisional 100 m model. It does not yet satisfy feature-level crossing
+inventories or the application-ready asset contract.
 
 ### Important Dependencies
 

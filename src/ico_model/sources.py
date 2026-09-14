@@ -235,7 +235,12 @@ class ArcGISClient:
             raise SourceAccessError(
                 f"ArcGIS object-ID query exceeded the transfer limit: {layer_url}"
             )
+        # ArcGIS commonly serializes an empty object-ID result as JSON null,
+        # rather than an empty list. That is a complete empty tile, not a
+        # malformed response; retain strict validation for all non-list values.
         object_ids = payload.get("objectIds", [])
+        if object_ids is None:
+            return []
         if not isinstance(object_ids, list):
             raise SourceAccessError(f"ArcGIS object-ID query did not return a list: {layer_url}")
         try:

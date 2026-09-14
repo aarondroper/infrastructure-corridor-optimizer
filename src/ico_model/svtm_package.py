@@ -90,6 +90,7 @@ def inspect_svtm_zip(
                 )
             extracted_bytes = 0
             compressed_bytes = 0
+            extracted_limit_exceeded = False
             member_names: list[str] = []
             vector_members: list[str] = []
             for info in infos:
@@ -99,10 +100,10 @@ def inspect_svtm_zip(
                 extracted_bytes += info.file_size
                 compressed_bytes += info.compress_size
                 if extracted_bytes > max_extracted_bytes:
-                    raise SvtmPackageError(
-                        "SVTM package extracted size exceeds configured limit: "
-                        f"{extracted_bytes} > {max_extracted_bytes}"
-                    )
+                    # Inventory is safe because it reads only ZIP metadata. The
+                    # selected-materialization path enforces the limit before
+                    # writing any member, and records this full-package overage.
+                    extracted_limit_exceeded = True
                 member_names.append(info.filename)
                 lower = info.filename.lower()
                 if (
@@ -137,7 +138,10 @@ def inspect_svtm_zip(
         "member_names": member_names,
         "vector_members": vector_members,
         "documentation_members": documentation_members,
+        "crc_status": "all-members-valid",
         "required_fields": list(required_fields),
+        "extracted_limit_bytes": max_extracted_bytes,
+        "extracted_limit_exceeded": extracted_limit_exceeded,
         "vector_candidate_present": bool(vector_members),
         "analytical_content_status": (
             "vector-candidate-requires-geospatial-schema-validation"
@@ -165,31 +169,66 @@ def validate_svtm_content_report(
             "SVTM package content report is not scoped to the configured S1 envelope"
         )
     geometry_type = str(report.get("geometry_type", "")).lower()
-    if "polygon" not in geometry_type:
+    representation = str(report.get("representation", "vector")).lower()
+    if representation == "vector" and "polygon" not in geometry_type:
         raise SvtmPackageError(f"SVTM package content is not polygonal: {geometry_type!r}")
+    if representation == "classified-raster" and "raster" not in geometry_type:
+        raise SvtmPackageError(f"SVTM package content is not raster data: {geometry_type!r}")
     try:
         crs_epsg = int(report["crs_epsg"])
-        feature_count = int(report["feature_count"])
-        unique_id_count = int(report["unique_id_count"])
-        duplicate_id_count = int(report["duplicate_id_count"])
     except (KeyError, TypeError, ValueError) as exc:
-        raise SvtmPackageError(
-            "SVTM package content report lacks CRS, feature, or ID reconciliation counts"
-        ) from exc
+        raise SvtmPackageError("SVTM package content report lacks CRS") from exc
     if crs_epsg != expected_crs_epsg:
         raise SvtmPackageError(
             f"SVTM package CRS mismatch: expected EPSG:{expected_crs_epsg}, observed EPSG:{crs_epsg}"
         )
-    if feature_count <= 0:
-        raise SvtmPackageError("SVTM package content has no features")
-    if unique_id_count != feature_count or duplicate_id_count != 0:
-        raise SvtmPackageError(
-            "SVTM package content has duplicate or unreconciled feature IDs: "
-            f"features={feature_count}, unique={unique_id_count}, duplicates={duplicate_id_count}"
-        )
-    if report.get("rest_count_reconciled") is not True:
-        raise SvtmPackageError("SVTM package content report does not reconcile with REST count evidence")
+    if representation == "vector":
+        try:
+            feature_count = int(report["feature_count"])
+            unique_id_count = int(report["unique_id_count"])
+            duplicate_id_count = int(report["duplicate_id_count"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise SvtmPackageError(
+                "SVTM vector report lacks feature or ID reconciliation counts"
+            ) from exc
+        if feature_count <= 0:
+            raise SvtmPackageError("SVTM package content has no features")
+        if unique_id_count != feature_count or duplicate_id_count != 0:
+            raise SvtmPackageError(
+                "SVTM package content has duplicate or unreconciled feature IDs: "
+                f"features={feature_count}, unique={unique_id_count}, duplicates={duplicate_id_count}"
+            )
+        if report.get("rest_count_reconciled") is not True:
+            raise SvtmPackageError("SVTM package content report does not reconcile with REST count evidence")
+    elif representation == "classified-raster":
+        try:
+            raster_width = int(report["raster_width"])
+            raster_height = int(report["raster_height"])
+            resolution_m = float(report["resolution_m"])
+            nodata_value = int(report["nodata_value"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise SvtmPackageError(
+                "SVTM raster report lacks dimensions, resolution, or nodata"
+            ) from exc
+        if raster_width <= 0 or raster_height <= 0 or resolution_m <= 0:
+            raise SvtmPackageError("SVTM raster dimensions or resolution are invalid")
+        if report.get("rest_count_reconciled") != "not-applicable-raster-representation":
+            raise SvtmPackageError(
+                "SVTM raster report must explicitly explain why REST feature-count reconciliation is not applicable"
+            )
+        value_table_fields = report.get("value_table_fields")
+        missing = [field for field in required_fields if field.lower() not in {
+            str(value).lower() for value in value_table_fields or []
+        }]
+        if not isinstance(value_table_fields, list) or missing:
+            raise SvtmPackageError(
+                f"SVTM raster value table is missing required fields: {missing}"
+            )
+    else:
+        raise SvtmPackageError(f"unsupported SVTM content representation: {representation}")
     fields = report.get("fields")
+    if representation == "classified-raster" and fields is None:
+        fields = report.get("value_table_fields")
     if not isinstance(fields, list):
         raise SvtmPackageError("SVTM package content report has no field list")
     field_names = {str(field).lower() for field in fields}
@@ -210,7 +249,11 @@ def validate_svtm_content_report(
                 raise SvtmPackageError("SVTM package content bounds are invalid") from exc
             if not valid:
                 raise SvtmPackageError("SVTM package content does not cover the S1 envelope")
-    if expected_feature_count is not None and feature_count != expected_feature_count:
+    if (
+        representation == "vector"
+        and expected_feature_count is not None
+        and feature_count != expected_feature_count
+    ):
         raise SvtmPackageError(
             f"SVTM package feature count does not reconcile with REST evidence: "
             f"{feature_count} != {expected_feature_count}"
@@ -219,13 +262,25 @@ def validate_svtm_content_report(
         "coverage_status": "complete",
         "geometry_type": geometry_type,
         "crs_epsg": crs_epsg,
-        "feature_count": feature_count,
-        "unique_id_count": unique_id_count,
-        "duplicate_id_count": duplicate_id_count,
-        "rest_count_reconciled": True,
+        "representation": representation,
+        "feature_count": feature_count if representation == "vector" else None,
+        "unique_id_count": unique_id_count if representation == "vector" else None,
+        "duplicate_id_count": duplicate_id_count if representation == "vector" else None,
+        "rest_count_reconciled": report.get("rest_count_reconciled"),
         "coverage_scope": "configured-S1-envelope",
         "fields": list(fields),
         "bounds": dict(bounds) if isinstance(bounds, Mapping) else None,
+        **(
+            {
+                "raster_width": raster_width,
+                "raster_height": raster_height,
+                "resolution_m": resolution_m,
+                "nodata_value": nodata_value,
+                "value_table_fields": list(value_table_fields),
+            }
+            if representation == "classified-raster"
+            else {}
+        ),
     }
 
 

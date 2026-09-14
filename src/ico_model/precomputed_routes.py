@@ -33,6 +33,17 @@ def _cell(value: Any, name: str, rows: int, cols: int) -> tuple[int, int]:
     return cell
 
 
+def _hard_exclusions(bundle: Mapping[str, Any], rows: int, cols: int) -> list[list[bool]]:
+    exclusions = [[False for _ in range(cols)] for _ in range(rows)]
+    values = bundle.get("unavailable_cells", [])
+    if not isinstance(values, Sequence) or isinstance(values, (str, bytes)):
+        raise RouteAssetError("unavailable_cells must be a sequence")
+    for value in values:
+        row, col = _cell(value, "unavailable cell", rows, cols)
+        exclusions[row][col] = True
+    return exclusions
+
+
 def _grid_shape(grids: Mapping[str, Any]) -> tuple[int, int]:
     try:
         first = next(iter(grids.values()))
@@ -72,6 +83,7 @@ def generate_precomputed_routes(
     if set(grids) != set(expected_components):
         raise RouteAssetError("grid bundle components do not match the configured model")
     rows, cols = _grid_shape(grids)
+    hard_excluded = _hard_exclusions(grid_bundle, rows, cols)
     origin = _cell(grid_bundle.get("origin_cell"), "origin_cell", rows, cols)
     destination = _cell(grid_bundle.get("destination_cell"), "destination_cell", rows, cols)
     presets = config.get("sensitivity_presets")
@@ -83,7 +95,7 @@ def generate_precomputed_routes(
         if not isinstance(preset, Mapping) or not isinstance(preset.get("weights"), Mapping):
             raise RouteAssetError(f"preset has no weights: {preset_name}")
         try:
-            costs = combine_cost_layers(grids, preset["weights"])
+            costs = combine_cost_layers(grids, preset["weights"], hard_excluded=hard_excluded)
             result = route_least_cost(costs, origin, destination, algorithm="astar")
         except (TypeError, ValueError, NoPathError) as exc:
             raise RouteAssetError(f"could not generate preset {preset_name!r}: {exc}") from exc

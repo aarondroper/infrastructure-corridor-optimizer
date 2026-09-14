@@ -74,6 +74,15 @@ class PrecomputedRouteTests(unittest.TestCase):
         with self.assertRaisesRegex(RouteAssetError, "outside"):
             generate_precomputed_routes(config, bundle)
 
+    def test_generation_respects_unavailable_cells(self):
+        config = load_config()
+        bundle = grid_bundle(config)
+        bundle["unavailable_cells"] = [[0, 2], [2, 0]]
+        generated = generate_precomputed_routes(config, bundle)
+        for route in generated["routes"]:
+            self.assertNotIn([0, 2], route["path_cells"])
+            self.assertNotIn([2, 0], route["path_cells"])
+
     def test_writer_publishes_manifest_and_preset_files(self):
         config = load_config()
         bundle = generate_precomputed_routes(config, grid_bundle(config))

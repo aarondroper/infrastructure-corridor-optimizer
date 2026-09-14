@@ -41,3 +41,14 @@ REST page cache is retained for comparison and fallback; it must not be hammered
   the dependency-light environment;
 - package content may differ from the REST release despite similar naming, which is
   an owner decision boundary rather than an implementation assumption.
+
+## Outcome — 14 September 2026
+
+The owner-supplied package was verified as the official C2.0.M2.2 release: valid
+ZIP, SHA-256 recorded, 72 members, CRC-valid, classified 5 m GeoTIFF/VAT,
+Quickview geodatabase, and MXD symbology. The classified raster was read directly
+from the archive and windowed to a complete S1 100 m artifact; no statewide
+geodatabase extraction was performed because its declared size exceeds the safety
+limit. The Copernicus GLO-30 fallback was restored and validated persistently.
+This plan's source-recovery objective is complete; geographic derivation and real
+route generation are recorded in the subsequent geographic-grid plan.

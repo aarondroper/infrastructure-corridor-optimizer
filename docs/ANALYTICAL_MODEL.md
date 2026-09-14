@@ -48,8 +48,8 @@ so incomplete data cannot silently produce a plausible route.
 ## Normalization and combination
 
 The current configuration is explicit and approved for sensitivity comparison; the
-source-derived transformations remain provisional until geographic coverage and data
-quality are validated:
+source-derived transformations remain provisional even after the first geographic
+build because this is a preliminary screening model:
 
 - slope is linearly clamped from 0 to 20 degrees to [0, 1];
 - binary indicator surfaces use 0 outside and 1 inside the mapped feature;
@@ -73,9 +73,10 @@ GLO-30 artifact when the primary is unavailable or fails validation. The terrain
 selection boundary requires a local raster artifact sidecar to declare its source ID,
 artifact CRS, processing-envelope CRS, resolution, complete bounds coverage, nodata
 metadata, and acquisition timestamp. `src/ico_model/terrain.py` records which source
-was selected and why. This is a provenance and input-integrity boundary only: the
-repository does not yet download DEM tiles, read GeoTIFF pixels, reproject rasters, or
-derive slope.
+was selected and why. The current build uses the validated Copernicus fallback tiles,
+reprojects them to the S1 100 m EPSG:7856 grid, and derives slope with finite-
+difference gradients. This remains a preliminary terrain proxy, not construction-
+grade terrain analysis.
 
 ## Routing core
 
@@ -110,14 +111,24 @@ protected-land overlap, native-vegetation overlap, watercourse crossings, road
 crossings by class, and railway crossings. These metrics explain trade-offs and must
 not be inferred solely from the composite score.
 
+## Geographic grid implementation
+
+`scripts/derive_geographic_grid.py` validates the complete persistent vector
+manifests and the Copernicus/SVTM inputs, then creates the current 100 m S1 grid.
+Vector layers are rasterized as binary masks with `all_touched=True`; invalid
+NPWS polygon geometries are repaired with Shapely `make_valid` and the repair
+count is recorded in the grid provenance. The SVTM
+classified PCT raster is treated as native vegetation when its value is greater
+than zero; value 0 is the package's "Not classified" category and is not marked as
+native vegetation. DEM or SVTM nodata cells are recorded as unavailable and excluded
+by the route generator. These choices preserve the approved penalty interpretation;
+they do not assert legal clearing status.
+
 ## Implementation boundary
 
-The current Python core intentionally has no GIS dependency. It validates normalized
-rectangular grids, combines layers, and routes them. Priority 3 now has standard-
-library acquisition boundaries for fixed endpoints, selected terrain artifacts, and
-bounded ArcGIS vector layers; it still needs DEM acquisition/pixel processing,
-SVTM acquisition, clipping/reprojection validation, raster/vector derivation, route
-assessment, and generated web assets. `ico_model.precomputed_routes` now applies the
-approved presets to a validated normalized-grid bundle and writes offline route-cell
-assets; these are not geographic routes until a GIS-backed grid stage supplies real
-cells and coordinates.
+The routing core remains dependency-light and validates normalized rectangular grids;
+optional Rasterio/Fiona/Shapely tooling is isolated to preprocessing and assessment.
+`ico_model.precomputed_routes` applies the approved presets to the geographic bundle
+and writes route-cell assets. The current S1 build also publishes EPSG:7844 GeoJSON
+and preliminary assessments, while application assets and feature-level crossing
+inventories remain future work.

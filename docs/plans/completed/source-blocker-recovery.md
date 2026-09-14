@@ -75,11 +75,19 @@ request exceeded the 32 MB response ceiling. It reached 190 validated pages and
 approximately 1.16 GB of page cache / 333.5 MB staged output before a repeated
 ArcGIS 500 and later bounded probes returned HTTP 400/timeouts. No SVTM artifact
 was published; the page-250 cache is retained for resumable continuation. The
-official bulk package is configured as an engineering delivery alternative, but
-its resource currently returns an HTTP 202 web challenge and its page describes a
-symbology package; no analytical contents are accepted without reader validation.
+official bulk package was initially blocked by an HTTP 202 web challenge, but the
+owner subsequently supplied the archive manually. Its analytical raster content
+is now validated; the REST cache remains fallback evidence.
 The approved Copernicus GLO-30 fallback was restored persistently and independently
 validated: four tiles, complete S1 coverage, and 160,523,100 bytes including
-metadata. Full SVTM capture and geographic derivation remain blocked by current
-source-service and bulk-resource access reliability, not by observed storage
-pressure.
+metadata. Geographic derivation remains pending the other vector layers, not DEM
+or SVTM package storage.
+
+Subsequent package recovery changed the evidence: the owner-supplied archive is a
+CRC-valid 4,720,800,490-byte ZIP containing the official C2.0.M2.2 classified
+5 m raster/VAT, Quickview geodatabase, and MXD. The raster was validated directly
+from the ZIP and windowed to a complete S1 100 m artifact; the statewide
+geodatabase was not extracted because it exceeds the extraction cap. The approved
+Copernicus GLO-30 fallback was also restored persistently and validated. The
+remaining frontier is acquisition of the other vector layers, geographic grid
+derivation, route generation, and route assessment.

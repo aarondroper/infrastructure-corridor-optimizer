@@ -24,6 +24,9 @@ are:
 - `src/ico_model/terrain.py`: local DEM sidecar validation and explicit primary/fallback selection, including validated Copernicus tile sets;
 - `src/ico_model/dem_acquisition.py`: public Copernicus GLO-30 tile selection, atomic checksum-reusing downloads, GeoTIFF/XML validation, and tile manifests;
 - `src/ico_model/svtm_package.py`: guarded resumable acquisition, ZIP safety inspection, selected-member extraction, and analytical content-report validation for the official SVTM bulk delivery;
+- `src/ico_model/svtm_raster.py`: direct `/vsizip` inspection of the official classified SVTM raster, VAT/metadata validation, and bounded S1 window materialization;
+- `src/ico_model/geographic_grid.py`: validated-source reprojection, vector rasterization, terrain slope derivation, and seven-component S1 grid construction;
+- `src/ico_model/route_assessment.py`: route georeferencing and independent preliminary geographic metrics;
 - `scripts/acquire_sources.py`: live endpoint acquisition and provenance manifest CLI;
 - `scripts/probe_sources.py`: ArcGIS source topology/CRS/extent probe;
 - `scripts/select_terrain_source.py`: DEM sidecar selection and provenance-report CLI;
@@ -32,10 +35,13 @@ are:
 - `scripts/generate_precomputed_routes.py`: static route-asset generation CLI for a validated normalized-grid bundle;
 - `scripts/acquire_copernicus_dem.py`: persistent-storage Copernicus fallback acquisition CLI;
 - `scripts/acquire_svtm_package.py`: persistent-storage SVTM bulk-package acquisition and validation CLI;
+- `scripts/validate_svtm_raster.py`: bounded validation and provenance publication for the owner-supplied SVTM raster package;
+- `scripts/derive_geographic_grid.py`: geographic S1 normalized-grid build CLI;
+- `scripts/assess_routes.py`: route GeoJSON and preliminary assessment CLI;
 - `scripts/cleanup_acquisition_storage.py`: dry-run-first cleanup for abandoned acquisition directories;
 - `config/model.json`: S1 endpoints, seven sensitivity components, normalization, and approved sensitivity presets;
-- `pyproject.toml`: minimal dependency-free Python package metadata;
-- `tests/`: seventy-seven standard-library unit tests covering cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, DEM acquisition/validation, terrain selection, precomputed route assets, SVTM package safeguards, and acquisition cleanup;
+- `pyproject.toml`: minimal Python package metadata with an optional `geospatial` extra for raster/vector processing;
+- `tests/`: eighty-two unit tests covering cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, DEM acquisition/validation, terrain selection, geographic outputs, precomputed route assets, SVTM package safeguards, and acquisition cleanup;
 - `benchmarks/benchmark_routing.py` and `benchmarks/results.json`: reproducible proxy benchmark;
 - `docs/ANALYTICAL_MODEL.md`: model semantics, evidence, and current execution boundary.
 
@@ -51,13 +57,16 @@ is implemented for fixed endpoints and bounded ArcGIS vector layers, with staged
 streaming output, tiled object-ID inventories, retries, persistent page caching,
 resumption, and explicit storage limits. No raw source artifacts are tracked in Git.
 Hydroline is now fully captured and independently validated in persistent external
-storage. SVTM is partially cached but has no published artifact after repeated
-service failures. The official Data.NSW/SEED bulk-package path is configured as an
-acquisition-engineering alternative for the same approved C2.0.M2.2 release, but its
-endpoint currently returns an HTTP 202 web challenge and its analytical contents
-could not be inspected. The package is not accepted as model input without a
-reader-produced content report reconciling geometry, CRS, attributes, S1 coverage,
-and the known REST count.
+storage. The owner-supplied official Data.NSW/SEED bulk package for the same approved
+SVTM C2.0.M2.2 release is now verified: it is a valid 4,720,800,490-byte ZIP with
+SHA-256 `e8d92c9a2b661b4265df90e239608a7a6e7c17bde0d57809a08f67182b187952`, 72
+members, and valid CRCs. It contains the classified 5 m GeoTIFF/VAT analytical
+representation, a Quickview ESRI geodatabase, and MXD symbology. The raster was
+read directly from the ZIP and a complete S1 100 m output was published under
+ignored persistent storage; the statewide geodatabase was not extracted because
+its declared 12.6 GB size exceeds the 8 GB extraction limit. Raster use preserves
+the approved native-vegetation/PCT interpretation; exact reconciliation to the
+known 216,808 REST polygon count is explicitly not applicable to the raster form.
 
 The approved public Copernicus GLO-30 fallback is now restored at
 `data/external/dem/copernicus-glo30-s1/`: four EPSG:4326 one-arcsecond tiles,
@@ -92,10 +101,11 @@ repository.
 ## Implemented
 
 The governance baseline, study/data feasibility record, analytical model definition,
-dependency-light cost/routing core, approved sensitivity configuration, endpoint
-acquisition boundary, unit tests, and deterministic routing benchmark are present. The
-core and acquisition boundary have no GIS dependency by design; the full geographic
-source-to-route pipeline remains future work.
+dependency-light cost/routing core, approved sensitivity configuration, endpoint and
+vector acquisition boundary, optional GIS preprocessing stage, unit tests, and
+deterministic routing benchmark are present. Geographic grid derivation, real S1
+offline routes, and preliminary route assessments are now implemented; frontend and
+deployment work remain future work.
 
 ## Verified
 
@@ -122,30 +132,22 @@ These are preserved in `docs/DECISIONS.md` and do not establish that correspondi
 
 ## Partially Implemented
 
-Priority 2 is complete. Priority 3 is active: the transparent model schema, tested
-grid operations, approved sensitivity configuration, synthetic benchmark, A* selection,
-offline precomputed MVP boundary, fixed-endpoint acquisition slice, source-topology
-probe, and bounded ArcGIS vector acquisition boundary are verified. Full source
-materialization, raster/vector derivation, route assessment, and application assets
-are not implemented.
+Priority 2 is complete. Priority 3 is active and its first geographic execution slice
+is verified: all required S1 source artifacts, the 100 m geographic grid, three real
+offline routes, and preliminary georeferenced assessments are present in ignored
+persistent storage. Application assets, feature-level crossing inventories, and
+production-quality validation remain.
 
 ## Open Inputs / Limitations
 
 Feasibility research has been performed against official source catalogues/services
 and representative live endpoints. The following inputs remain unresolved:
 
-- full external capture of the approximately 216,808-feature native-vegetation
-  layer; Hydroline is complete at 68,320 unique features. The road and
-  hydrography-area captures are verified externally. The bounded vector adapter,
-  staged streaming writer, and source-specific page-size policy are implemented
-  while raw captures remain outside version control;
-- analytical SVTM bulk-package contents and reliable acquisition from the current
-  Data.NSW/SEED endpoint; its persistent state records an HTTP 202 web challenge;
-  the validated page-250 REST cache remains available only as fallback/validation;
-- normalization details;
-- routing grid resolution;
-- geographic source coverage and data-quality validation;
-- geographic grid construction, offline route generation from those grids, and route assessment;
+- exact vector-form SVTM reconciliation remains a fallback/validation question; the
+  approved classified raster representation is accepted for the model and its known
+  REST vector count of 216,808 is not applied as a raster feature count;
+- feature-level crossing inventories and class-specific route assessment;
+- calibration of provisional normalization and penalty mappings;
 - inclusion or exclusion of a flood constraint;
 - inclusion of DXF export.
 
@@ -157,9 +159,10 @@ No hosting provider is selected as a confirmed implementation decision.
 
 ## Test / Validation State
 
-Verified on 13 September 2026:
+Verified on 14 September 2026:
 
-- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 77 tests passed after the SVTM package safeguards and persistent DEM restoration;
+- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 82 tests passed, with one geospatial test skipped because optional GIS dependencies are not installed in the base interpreter;
+- `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python -m unittest discover -s tests -v` — 82 tests passed with the geospatial test enabled;
 - `PYTHONPATH=src python3 benchmarks/benchmark_routing.py --sizes 128 256 512` — completed and retained in `benchmarks/results.json`;
 - `PYTHONPATH=src python3 scripts/acquire_sources.py --output <temporary manifest> --timeout 20` — live GA endpoint acquisition succeeded; the manifest was written outside the repository;
 - `PYTHONPATH=src python3 scripts/probe_sources.py --output <temporary report> --timeout 20` — live probe validated GA, NPWS, SVTM, hydrography, and transport, and reported the configured terrain services as deferred/no-raster;
@@ -174,10 +177,15 @@ Verified on 13 September 2026:
 - the benchmark produced equal A*/Dijkstra path costs and fewer explored cells for A* at all three sizes;
 - JSON configuration and benchmark output parse successfully through the Python standard library.
 - `PYTHONPATH=src:. python3 scripts/generate_precomputed_routes.py --grid-bundle <temporary bundle> --output-dir <temporary directory>` — generated shortest, balanced, and environmental route assets and a manifest from a deterministic normalized-grid fixture.
-- `PYTHONPATH=src python3 scripts/probe_sources.py --output /tmp/ico-source-probe-svtm.json --timeout 30` — live topology probe validated the configured SVTM ArcGIS feature service and layer metadata at EPSG:3308; no full SVTM artifact was published.
-- bounded count-only probes returned 216,808 SVTM and 68,320 Hydroline features; 20-feature geometry samples measured approximately 8.1 KB and 0.77 KB per serialized feature respectively. No full SVTM artifact was published.
+- persistent acquisition and validation produced NPWS 20 features, roads 46,092, railways 415, hydrography-area 12,652, and hydrography-line 68,320; all five vector manifests validate in EPSG:7856 and are complete by their tiled inventories;
+- ArcGIS NPWS empty tiles returned `objectIds: null`; this valid empty-result behavior is now handled and regression-tested rather than treated as a malformed response;
+- `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python scripts/derive_geographic_grid.py ...` — published a real S1 100 m EPSG:7856 bundle of 990x767 cells, 8,329 unavailable DEM/SVTM nodata cells, transformed endpoint cells `[149, 125]` and `[880, 672]`, and all seven components. Shapely repaired 15 invalid NPWS polygon geometries; the other four vector inputs required no repair.
+- `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python scripts/generate_precomputed_routes.py ...` — generated shortest (732 cells, 832.807 cost), balanced (741 cells, 494.735 cost), and environmental (786 cells, 311.769 cost) routes with A*;
+- `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python scripts/assess_routes.py ...` — published EPSG:7844 GeoJSON and preliminary independent lengths of 95.76 km, 96.28 km, and 99.17 km respectively;
+- bounded count-only probes returned 216,808 SVTM and 68,320 Hydroline features; 20-feature geometry samples measured approximately 8.1 KB and 0.77 KB per serialized feature respectively. No full SVTM vector artifact was published; the official classified raster representation is validated and accepted.
 - Hydroline validation independently confirmed 68,320 unique features, 355 pages, 16 tiles, and 965 tiled-inventory overlaps reconciled. The persistent final bundle is 105,232,759 bytes and its cache namespace is 108,584,694 bytes.
-- Full SVTM acquisition first exceeded the unchanged 32 MB response ceiling at 1,000 features/page. The page size was reduced to 250 based on observed response size; the largest captured page was 28,080,441 bytes. The run reached 190 validated pages, 1,159,268,449 bytes of page cache, and a 333,452,505-byte peak staged artifact before repeated ArcGIS failures; no SVTM artifact was published.
+- Full SVTM REST acquisition first exceeded the unchanged 32 MB response ceiling at 1,000 features/page. The page size was reduced to 250 based on observed response size; the run reached 190 validated pages, 1,159,268,449 bytes of page cache, and a 333,452,505-byte peak staged artifact before repeated ArcGIS failures. The page-250 cache remains fallback/validation evidence, not the primary source.
+- The owner-supplied SVTM ZIP passed full `ZipFile.testzip()` validation. Its 5 m raster is EPSG:3308, uint16, one-band, LZW, and nodata 65535; its VAT has 1,687 records and required PCT/vegetation fields. Direct window reading produced a 789x1005 100 m S1 raster with complete envelope coverage, VAT-valid values, and approximately 0.125% nodata in the output. The package archive is 4.72 GB and exceeds the configured 4 GB archive cap; declared package extraction is 16.10 GB and exceeds the 8 GB cap, so no statewide extraction was attempted. The observed persistent package-plus-output working set was 4,721,081,685 bytes.
 - The largest observed combined Hydroline/SVTM working set was approximately 1.60 GB, below the unchanged 12 GB limit; persistent `df -h .` checks retained at least 912 GB free during capture.
 - `df -h .` — persistent project storage reported 911 GB available before DEM restoration.
 - `PYTHONPATH=src python3 scripts/acquire_copernicus_dem.py --output-dir data/external/dem/copernicus-glo30-s1 --timeout 120 --max-retries 3 --backoff 1` — restored four public GLO-30 tiles covering S1; the persistent artifact is 160,523,100 bytes and passed the terrain artifact validator.
@@ -202,18 +210,10 @@ and the decision log; the selector does not silently substitute an unconfigured 
 
 ## Current Development Frontier
 
-Priority 3 is active. The terrain source policy, local artifact contract, bounded
-ArcGIS vector acquisition boundary, staged streaming publication path, external road
-and hydrography-area captures, artifact-integrity gate, and source-preserving vector
-schema normalization are verified. Hydrography-line is now fully materialized and
-independently validated. The approved SVTM feature layer is configured and
-topology-validated but remains only partially cached because upstream service
-requests failed repeatedly after 190 validated pages. The official bulk delivery has
-been verified as the same named release/licensed dataset in official metadata, but
-not as analytical vector content: the published page describes the supplied package
-as MXD/layer-file symbology, and the direct resource is currently WAF-challenged.
-The next connected work is therefore blocked at SVTM acquisition/content
-verification, not DEM storage. Once SVTM is complete and independently validated,
-the next work is raster/vector derivation and aligned geographic grid construction,
-followed by route assessment and the three geographic offline routes. No geographic
-route is claimed.
+Priority 3 is active. The complete approved S1 source stack is now captured and
+validated in persistent ignored storage, including the official SVTM package raster
+representation and Copernicus fallback DEM. The 100 m geographic grid, three A*
+route assets, EPSG:7844 GeoJSON, and preliminary assessments are verified outputs.
+The next frontier is feature-level route assessment refinement, compact application
+asset packaging, and the static React/MapLibre MVP; no engineering or regulatory
+approval is implied.

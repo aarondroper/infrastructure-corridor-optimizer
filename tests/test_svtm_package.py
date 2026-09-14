@@ -13,6 +13,7 @@ from ico_model.svtm_package import (
     extract_svtm_members,
     validate_svtm_content_report,
 )
+from ico_model.svtm_raster import _validate_metadata_xml
 
 
 class FakeResponse:
@@ -167,6 +168,35 @@ class SvtmPackageTests(unittest.TestCase):
             expected_bounds={"west": 150.82, "south": -33.15, "east": 151.62, "north": -32.27},
         )
         self.assertEqual(report["feature_count"], 216808)
+
+    def test_classified_raster_report_validates_without_vector_count(self):
+        report = validate_svtm_content_report(
+            {
+                "representation": "classified-raster",
+                "coverage_status": "complete",
+                "coverage_scope": "configured-S1-envelope",
+                "geometry_type": "classified raster",
+                "crs_epsg": 3308,
+                "raster_width": 788,
+                "raster_height": 1004,
+                "resolution_m": 100,
+                "nodata_value": 65535,
+                "value_table_fields": ["Value", "PCTID", "PCTName", "vegClass", "vegForm"],
+                "rest_count_reconciled": "not-applicable-raster-representation",
+                "bounds": {"west": 9655964, "south": 4501550, "east": 9734785, "north": 4602015},
+            },
+            required_fields=("PCTID", "PCTName", "vegClass", "vegForm"),
+            expected_bounds={"west": 9655969, "south": 4501558, "east": 9734784, "north": 4602009},
+        )
+        self.assertEqual(report["representation"], "classified-raster")
+        self.assertIsNone(report["feature_count"])
+
+    def test_raster_metadata_xml_identifies_release_crs_and_nodata(self):
+        metadata = _validate_metadata_xml(
+            b"<metadata><itemName>SVTM_NSW_Extant_PCT_vC2_0_M2_2_5m</itemName>"
+            b"<identCode code='3308'/><NoDataValue>65535</NoDataValue></metadata>"
+        )
+        self.assertEqual(metadata["release_verified"], "C2.0.M2.2")
 
     def test_extraction_requires_explicit_members_and_is_atomic(self):
         with tempfile.TemporaryDirectory() as directory:

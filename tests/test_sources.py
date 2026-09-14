@@ -163,6 +163,15 @@ class SourceTests(unittest.TestCase):
             [7, 8],
         )
 
+    def test_object_id_query_accepts_arcgis_empty_tile_null(self):
+        def opener(request, timeout):
+            return FakeResponse({"objectIdFieldName": "OBJECTID", "objectIds": None})
+
+        self.assertEqual(
+            ArcGISClient(opener).query_object_ids("https://example.test/0", where="1=1"),
+            [],
+        )
+
     def test_endpoint_validation_accepts_configured_records(self):
         config = load_config()
         validated = validate_endpoint_features(config["endpoints"], endpoint_features(config))

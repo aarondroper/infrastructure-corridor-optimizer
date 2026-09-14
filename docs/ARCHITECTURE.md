@@ -24,13 +24,14 @@ The preferred high-level pattern is:
 
 ## Verified Existing Architecture
 
-The repository currently contains governance and feasibility documentation plus a
-dependency-light analytical core under `src/ico_model/`, approved sensitivity model configuration,
-unit tests, a minimal Python package manifest, an ArcGIS endpoint acquisition module,
-and a deterministic benchmark. The implemented core validates and combines normalized
-grids, runs deterministic eight-neighbor A*/Dijkstra routing, and validates a live
-Geoscience Australia endpoint snapshot. There are still no geographic cost surfaces,
-frontend files, build/deployment configuration, or generated routes.
+The repository currently contains governance and feasibility documentation, a
+dependency-light analytical core under `src/ico_model/`, approved sensitivity model
+configuration, unit tests, ArcGIS/vector acquisition, a guarded SVTM package reader,
+a GIS-backed geographic-grid stage, and a deterministic benchmark. The implemented
+pipeline validates source manifests, derives a 100 m EPSG:7856 S1 grid, runs
+deterministic eight-neighbor A*/Dijkstra routing, and publishes georeferenced route
+and assessment assets. There are still no frontend files or build/deployment
+configuration.
 
 The sections below distinguish implemented analytical behavior from intended pipeline
 and application components. They become verified only when implemented files and
@@ -96,7 +97,8 @@ provenance. `ico_model.dem_acquisition` and `scripts/acquire_copernicus_dem.py` 
 reproducibly acquire the approved public GLO-30 fallback into persistent external
 storage, validate GeoTIFF/XML coverage, CRS, one-arcsecond structure, nominal 30 m
 resolution, and nodata metadata, and publish a tile manifest. Raster-pixel
-processing and reprojection into an analysis grid remain future work.
+processing and reprojection into an analysis grid are now implemented by the
+geographic-grid stage below.
 `scripts/acquire_vector_sources.py` provides bounded, tiled, object-ID-paginated
 ArcGIS acquisition for the NPWS, SVTM native-vegetation, hydrography, road, and
 railway layers, requesting EPSG:7856 output and rejecting incomplete pages. Its
@@ -110,14 +112,19 @@ The configured road layer uses a 150-ID page size because the live transport
 service rejected the 200-ID default, while the global default remains 200. The
 adapter does not clip, repair, rasterize, or derive cost surfaces. The SVTM WMS
 resource is retained for display rather than analytical capture.
-The SVTM ArcGIS feature-layer resource is configured for native-vegetation capture;
-its WMS resource remains available for display. The configured S1 envelope contains
-approximately 216,808 intersecting polygons, so full materialization remains an
-external operational task and is not treated as verified output.
+The SVTM ArcGIS feature-layer resource remains configured as fallback/validation;
+its WMS resource remains available for display. The official C2.0.M2.2 package's
+classified raster is the accepted native-vegetation input for the current grid, so
+the known 216,808 REST polygon count is not used as a raster feature-count gate.
 `ico_model.precomputed_routes` and `scripts/generate_precomputed_routes.py` provide
 the offline grid-to-route execution boundary: they validate a seven-component
 normalized-grid bundle, apply each approved preset, run deterministic A*, and publish
-provenance-rich route-cell assets. They do not derive geographic grids or coordinates.
+provenance-rich route-cell assets. `ico_model.geographic_grid` and
+`scripts/derive_geographic_grid.py` validate the complete local source manifests,
+reproject DEM/SVTM rasters, rasterize vector indicators, derive slope and binary
+penalties, and publish the 100 m normalized grid. `ico_model.route_assessment` and
+`scripts/assess_routes.py` convert route cells to EPSG:7844 GeoJSON and report
+independent preliminary length, terrain-proxy, and component-cell metrics.
 
 ### 2. Study-area preparation
 

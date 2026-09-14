@@ -155,6 +155,63 @@ must supply the content report before model use.
 A bounded live probe on 13 September 2026 received HTTP 202 with an interactive
 web challenge and wrote only the persistent 423-byte state file. No archive bytes
 were written and no retry loop was started. Do not repeatedly hammer this endpoint.
+
+The owner-supplied archive was later inspected in place at
+`data/cache/seed/svtm-c2.0.m2.2/svtm_nsw_extant_pct_vc2_0_m2_2_108.zip`. It is
+4,720,800,490 bytes with SHA-256
+`e8d92c9a2b661b4265df90e239608a7a6e7c17bde0d57809a08f67182b187952`, contains
+72 members, and passes whole-archive CRC validation. The inventory includes a
+12.6 GB-declared Quickview geodatabase, a classified 5 m GeoTIFF with VAT and
+metadata, and an MXD. The archive exceeds the configured 4 GB download cap and
+the package's declared 16.1 GB extraction exceeds the 8 GB extraction cap. The
+workflow therefore reads the TIFF through GDAL `/vsizip/` and writes only the S1
+100 m artifact under `data/external/vectors/svtm-package/`; it does not extract the
+statewide geodatabase. The resulting raster is EPSG:3308, uint16, nodata 65535,
+789x1005 cells, and has 1,687 VAT records. Its provenance and content report are
+`svtm_s1_raster_manifest.json` and `s1-svtm-raster-content-report.json` in that
+ignored persistent directory. The measured package-plus-output working set is
+4,721,081,685 bytes.
+
+The direct validation command is:
+
+```bash
+PYTHONPATH=src python3 scripts/validate_svtm_raster.py \
+  --archive data/cache/seed/svtm-c2.0.m2.2/svtm_nsw_extant_pct_vc2_0_m2_2_108.zip \
+  --output-dir data/external/vectors/svtm-package --cell-size-m 100
+```
+
+## Geographic derivation and route handoff
+
+Once the validated persistent source artifacts are present, derive the current
+100 m grid with the optional geospatial extra installed:
+
+```bash
+PYTHONPATH=src:. python3 scripts/derive_geographic_grid.py \
+  --dem-dir data/external/dem/copernicus-glo30-s1 \
+  --svtm-raster data/external/vectors/svtm-package/s1-svtm-100m.tif \
+  --protected-land-manifest data/external/vectors/s1-npws-estate/acquisition_manifest.json \
+  --hydrography-line-manifest data/external/vectors/s1-hydrography-line-final/acquisition_manifest.json \
+  --hydrography-area-manifest data/external/vectors/s1-hydrography-area/acquisition_manifest.json \
+  --roads-manifest data/external/vectors/s1-roads/acquisition_manifest.json \
+  --railways-manifest data/external/vectors/s1-railways/acquisition_manifest.json \
+  --output data/external/grids/s1-100m/normalized_grid_bundle.json
+PYTHONPATH=src python3 scripts/generate_precomputed_routes.py \
+  --grid-bundle data/external/grids/s1-100m/normalized_grid_bundle.json \
+  --output-dir data/external/routes/s1-100m
+PYTHONPATH=src:. python3 scripts/assess_routes.py \
+  --grid-bundle data/external/grids/s1-100m/normalized_grid_bundle.json \
+  --routes-dir data/external/routes/s1-100m \
+  --output data/external/routes/s1-100m/route_assessments.json
+```
+
+The current measured outputs are a 990x767 grid (32.3 MB), 8,329 unavailable
+cells, and three routes of 95.76 km, 96.28 km, and 99.17 km for shortest,
+balanced, and environmental respectively. These are preliminary screening
+assets; feature-level crossing inventories and the frontend remain future work.
+
+The command refuses to overwrite an existing output. Keep the archive and derived
+artifact outside Git; use the cleanup procedure below only for abandoned cache or
+staging directories, not for this validated source package.
 When access is available, use:
 
 ```bash
