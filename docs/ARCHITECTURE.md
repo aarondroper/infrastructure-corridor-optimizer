@@ -32,7 +32,11 @@ pipeline validates source manifests, derives a 100 m EPSG:7856 S1 grid, runs
 deterministic eight-neighbor A*/Dijkstra routing, and publishes georeferenced route
 and feature-level impact-assessment assets. The `web/` directory now contains the
 first static React/TypeScript + MapLibre application and Vite production build
-configuration; deployment is not yet verified.
+configuration; deployment is not yet verified. MapLibre provides the interactive
+basemap and camera, while the precomputed route centerlines and endpoints are drawn
+in a synchronized SVG overlay. This keeps the browser layer static and deterministic
+after the browser's GeoJSON-worker path proved unreliable in bounded production
+preview testing.
 
 The sections below distinguish implemented analytical behavior from intended pipeline
 and application components. They become verified only when implemented files and
@@ -255,10 +259,11 @@ Responsibilities:
 - communicate methodology and preliminary-screening limitations clearly.
 
 The first verified implementation is `web/src/App.tsx`: it fetches the compact
-`web/public/data/routes.json` asset, renders route alternatives in MapLibre, switches
-between approved presets, shows key assessment metrics and inventory counts, and
-exports the selected route as GeoJSON or a feature-level CSV. It does not run routing
-in the browser and currently uses OpenStreetMap raster tiles as a contextual basemap.
+`web/public/data/routes.json` asset, renders the MapLibre basemap with a synchronized
+SVG overlay for route alternatives and endpoints, switches between approved presets,
+shows key assessment metrics and inventory counts, and exports the selected route as
+GeoJSON or a feature-level CSV. It does not run routing in the browser and currently
+uses OpenStreetMap raster tiles as a contextual basemap.
 
 ## Routing Execution Architecture
 

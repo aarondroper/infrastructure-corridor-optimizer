@@ -46,11 +46,15 @@ are:
 - `tests/`: automated coverage includes cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, DEM acquisition/validation, terrain selection, geographic outputs, route-impact logic, compact web assets, precomputed route assets, SVTM package safeguards, and acquisition cleanup;
 - `benchmarks/benchmark_routing.py` and `benchmarks/results.json`: reproducible proxy benchmark;
 - `docs/ANALYTICAL_MODEL.md`: model semantics, evidence, and current execution boundary.
+- `docs/ROUTE_ASSESSMENT.md`: verified S1 route metrics, preset interpretation, and
+  calibration classification;
+- `web/src/App.tsx`, `web/tests/mvp.spec.ts`, and `web/playwright.config.ts`: static
+  application and bounded production-preview browser verification;
 
 There is still no verified evidence of:
 
 - deployment configuration or a live public application;
-- CI, linting configuration, or browser-level visual verification;
+- CI or linting configuration;
 - a DXF export or arbitrary client-side routing.
 
 The feasibility record remains source evidence and scenario context. Source acquisition
@@ -106,8 +110,7 @@ dependency-light cost/routing core, approved sensitivity configuration, endpoint
 vector acquisition boundary, optional GIS preprocessing stage, unit tests, and
 deterministic routing benchmark are present. Geographic grid derivation, real S1
 offline routes, feature-level route assessments, compact web assets, and the first
-static frontend are implemented; deployment and final export polish remain future
-work.
+static frontend are implemented; deployment remains future work.
 
 ## Verified
 
@@ -139,8 +142,12 @@ current S1 slice. The complete approved source stack, 100 m geographic grid, thr
 real offline routes, feature-level vector/raster impact inventories, physical route
 metrics, plausibility diagnostics, and a 327,723-byte compact web asset are present in
 ignored persistent storage or generated application source. The first static
-React/TypeScript + MapLibre MVP is implemented and builds locally; deployment,
-browser visual verification, and final export/deployment polish remain.
+React/TypeScript + MapLibre MVP is implemented, builds locally, and has passed
+bounded Chromium production-preview verification at desktop, laptop, tablet, and
+mobile viewports. MapLibre supplies the basemap and a synchronized SVG overlay
+supplies the precomputed route centerlines/endpoints; this avoids an observed
+MapLibre GeoJSON-worker loading failure while preserving the static architecture.
+Deployment remains unverified.
 
 ## Open Inputs / Limitations
 
@@ -150,7 +157,9 @@ and representative live endpoints. The following inputs remain unresolved:
 - exact vector-form SVTM reconciliation remains a fallback/validation question; the
   approved classified raster representation is accepted for the model and its known
   REST vector count of 216,808 is not applied as a raster feature count;
-- calibration of provisional normalization and penalty mappings;
+- future calibration of provisional normalization and penalty mappings remains an
+  open analytical option, but the current three-route evidence review found no
+  calibration justified;
 - inclusion or exclusion of a flood constraint;
 - inclusion of DXF export.
 
@@ -162,7 +171,7 @@ No hosting provider is selected as a confirmed implementation decision.
 
 ## Test / Validation State
 
-Verified on 14 September 2026:
+Verified through 15 September 2026:
 
 - `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 85 tests passed, with three geospatial tests skipped because optional GIS dependencies are not installed in the base interpreter;
 - `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python -m unittest discover -s tests -v` — 85 tests passed with GIS-backed route-impact tests enabled;
@@ -186,8 +195,10 @@ Verified on 14 September 2026:
 - `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python scripts/generate_precomputed_routes.py ...` — generated shortest (732 cells, 832.807 cost), balanced (741 cells, 494.735 cost), and environmental (786 cells, 311.769 cost) routes with A*;
 - `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python scripts/assess_routes.py ...` with all five vector artifacts and the SVTM raster/archive — published feature-level inventories, EPSG:7844 GeoJSON, physical slope metrics, route-quality diagnostics, and independent lengths of 95.76 km, 96.28 km, and 99.17 km respectively. All routes used available cells, matched endpoint cells, avoided grid boundaries, and had simple centerlines;
 - `PYTHONPATH=src python3 scripts/build_web_assets.py ...` — published a 327,723-byte static asset containing the three route geometries, metrics, compact impact inventories, endpoint features, comparison data, and screening disclaimer with raw source paths removed;
-- `npm install` in `web/` — installed the declared React/TypeScript/MapLibre dependencies; npm reported one critical advisory that remains to be reviewed before deployment;
-- `npm run build` in `web/` — TypeScript and Vite production build succeeded; MapLibre bundle-size warning remains expected for the initial MVP;
+- `npm install` in `web/` — installed the declared React/TypeScript/MapLibre and Playwright browser-test dependencies;
+- `npm run build` in `web/` — TypeScript and Vite production build succeeded; the MapLibre bundle-size warning remains expected for the initial MVP;
+- `PLAYWRIGHT_BROWSERS_PATH=/tmp/ico-browser-cache npm run test:browser` in `web/` — three production-preview tests passed: desktop route switching/inspection/exports, initial-load responsive checks at 1280×800, 768×1024, and 390×844, and failed-asset error handling. Screenshots are retained under ignored `web/artifacts/browser-verification/`;
+- the browser review confirmed visible route centerlines/endpoints, map controls and bounds, route switching, feature inspection, keyboard focus, no horizontal overflow, and no captured application console/page/runtime errors or local-asset request failures. OpenStreetMap tile requests remain an external runtime dependency;
 - bounded count-only probes returned 216,808 SVTM and 68,320 Hydroline features; 20-feature geometry samples measured approximately 8.1 KB and 0.77 KB per serialized feature respectively. No full SVTM vector artifact was published; the official classified raster representation is validated and accepted.
 - Hydroline validation independently confirmed 68,320 unique features, 355 pages, 16 tiles, and 965 tiled-inventory overlaps reconciled. The persistent final bundle is 105,232,759 bytes and its cache namespace is 108,584,694 bytes.
 - Full SVTM REST acquisition first exceeded the unchanged 32 MB response ceiling at 1,000 features/page. The page size was reduced to 250 based on observed response size; the run reached 190 validated pages, 1,159,268,449 bytes of page cache, and a 333,452,505-byte peak staged artifact before repeated ArcGIS failures. The page-250 cache remains fallback/validation evidence, not the primary source.
@@ -198,7 +209,7 @@ Verified on 14 September 2026:
 - `PYTHONPATH=src python3 scripts/acquire_svtm_package.py --cache-dir data/cache/seed/svtm-c2.0.m2.2 --output-dir data/external/vectors/svtm-package --timeout 15 --max-retries 0` — bounded package probe wrote only a 423-byte persistent state record and failed safely on the official endpoint's HTTP 202 web challenge; no archive bytes were materialized.
 
 No dedicated linting/type-check command beyond the successful TypeScript compiler,
-no browser visual verification, and no deployment verification exists yet. Git status
+no automated accessibility audit and no deployment verification exists yet. Git status
 and diff checks are available and are run before commits.
 
 ## Owner Decision Status
@@ -218,7 +229,9 @@ and the decision log; the selector does not silently substitute an unconfigured 
 
 The first analytical and static-MVP execution slice is complete: the approved S1
 source stack, geographic grid, A* routes, feature-level assessments, compact assets,
-and local frontend build are verified. The next frontier is professional export
-polish, accessibility/browser verification, deployment selection and verification,
-and any owner-reviewed calibration of provisional model transformations. No
-engineering or regulatory approval is implied.
+local frontend build, and bounded browser verification are verified. The current
+preset evidence is classified as credible with no calibration currently justified;
+the comparison is recorded in `docs/ROUTE_ASSESSMENT.md`. The next frontier is
+deployment selection/verification and only then any separately authorized product
+polish or owner-reviewed analytical calibration. No engineering or regulatory
+approval is implied.

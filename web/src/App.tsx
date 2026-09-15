@@ -31,6 +31,8 @@ function format(value: number | null | undefined, digits = 1): string {
 function MapPanel({ data, selected }: { data: AppData; selected: Preset }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
+  const [mapInstance, setMapInstance] = useState<Map | null>(null);
+  const [, setCameraRevision] = useState(0);
   const selectedRoute = data.routes.find((route) => route.preset === selected);
 
   useEffect(() => {
@@ -51,25 +53,30 @@ function MapPanel({ data, selected }: { data: AppData; selected: Preset }) {
       },
       layers: [{ id: "osm", type: "raster", source: "osm" }],
     };
-    const instance = new maplibregl.Map({ container: container.current, style: style as any, bounds, fitBoundsOptions: { padding: 48 } });
+    const instance = new maplibregl.Map({ container: container.current, style: style as any, bounds, fitBoundsOptions: { padding: 72 } });
     instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-    instance.on("load", () => {
-      instance.addSource("routes", { type: "geojson", data: { type: "FeatureCollection", features: data.routes.map((route) => route.geometry) } as any });
-      instance.addSource("endpoints", { type: "geojson", data: data.endpoints as any });
-      instance.addLayer({ id: "routes-muted", type: "line", source: "routes", paint: { "line-color": ["match", ["get", "preset"], "environmental", "#8e5b3a", "balanced", "#196d72", "#455a64"], "line-width": 2, "line-opacity": 0.42 } });
-      instance.addLayer({ id: "route-selected", type: "line", source: "routes", filter: ["==", ["get", "preset"], selected], paint: { "line-color": "#e2a84b", "line-width": 4, "line-opacity": 0.98 } });
-      instance.addLayer({ id: "endpoints", type: "circle", source: "endpoints", paint: { "circle-color": "#f5f0df", "circle-radius": 6, "circle-stroke-color": "#102a31", "circle-stroke-width": 2 } });
-      instance.addLayer({ id: "endpoint-labels", type: "symbol", source: "endpoints", layout: { "text-field": ["get", "name"], "text-offset": [0, 1.2], "text-size": 12 }, paint: { "text-color": "#102a31", "text-halo-color": "#f5f0df", "text-halo-width": 1.5 } });
-    });
+    const updateOverlay = () => setCameraRevision((revision) => revision + 1);
+    const resizeObserver = new ResizeObserver(() => { instance.resize(); updateOverlay(); });
+    resizeObserver.observe(container.current);
+    instance.on("load", () => { container.current?.parentElement?.setAttribute("data-map-layers", "basemap,route-overlay,endpoints,endpoint-labels"); updateOverlay(); });
+    instance.on("move", updateOverlay);
+    instance.on("resize", updateOverlay);
     map.current = instance;
-    return () => { instance.remove(); map.current = null; };
+    setMapInstance(instance);
+    return () => { resizeObserver.disconnect(); instance.off("move", updateOverlay); instance.off("resize", updateOverlay); instance.remove(); map.current = null; setMapInstance(null); };
   }, [data]);
 
-  useEffect(() => {
-    if (map.current?.getLayer("route-selected")) map.current.setFilter("route-selected", ["==", ["get", "preset"], selected]);
-  }, [selected]);
-
-  return <div className="map-wrap"><div ref={container} className="map" aria-label={`Map showing the ${PRESET_LABELS[selected]} route`} /><div className="map-caption">S1 · 100 m analysis grid · route centerlines shown for preliminary screening</div>{selectedRoute && <div className="map-badge">{PRESET_LABELS[selected]} route selected</div>}</div>;
+  const projectedRoutes = mapInstance ? data.routes.map((route) => ({ ...route, points: route.geometry.geometry.coordinates.map(([lng, lat]: number[]) => { const point = mapInstance.project([lng, lat]); return `${point.x},${point.y}`; }).join(" ") })) : [];
+  const projectedEndpoints = mapInstance ? data.endpoints.features.map((feature: AnyRecord) => ({ ...feature, point: mapInstance.project(feature.geometry.coordinates) })) : [];
+  return <div className="map-wrap" data-map-layers="loading">
+    <div ref={container} className="map" aria-label={`Map showing the ${PRESET_LABELS[selected]} route`} />
+    {mapInstance && <svg className="route-overlay" role="img" aria-label="Precomputed route overlay" data-rendered-route-features={projectedRoutes.length} data-rendered-endpoint-features={projectedEndpoints.length}>
+      {projectedRoutes.map((route) => <polyline key={`${route.preset}-muted`} className="route-line route-line-muted" data-preset={route.preset} points={route.points} />)}
+      {projectedRoutes.filter((route) => route.preset === selected).map((route) => <g key={`${route.preset}-selected`}><polyline className="route-line route-line-casing" data-preset={route.preset} points={route.points} /><polyline className="route-line route-line-selected" data-preset={route.preset} points={route.points} /></g>)}
+      {projectedEndpoints.map((endpoint: AnyRecord) => <g key={endpoint.properties.name} className="route-endpoint"><circle cx={endpoint.point.x} cy={endpoint.point.y} r="6" /><text x={endpoint.point.x} y={endpoint.point.y + (endpoint.properties.role === "destination" ? -10 : 21)}>{endpoint.properties.name}</text></g>)}
+    </svg>}
+    <div className="map-caption">S1 · 100 m analysis grid · route centerlines shown for preliminary screening</div>{selectedRoute && <div className="map-badge">{PRESET_LABELS[selected]} route selected</div>}
+  </div>;
 }
 
 function download(name: string, content: string, type: string) {

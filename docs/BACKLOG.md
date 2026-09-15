@@ -159,9 +159,11 @@ Produce professional route-impact metrics, crossing inventories, and compact web
 
 ## Priority 5 — Interactive Web Application
 
-**Status:** Active, first static comparison slice implemented. The initial React/
-TypeScript + MapLibre app builds and compares precomputed routes; deployment,
-browser-level visual/accessibility verification, and further inspection polish remain.
+**Status:** Core static comparison slice browser-verified. The React/TypeScript +
+MapLibre app builds and compares precomputed routes, exposes impact inspection and
+working GeoJSON/CSV exports, and has passed bounded Chromium verification at
+desktop/laptop/tablet/mobile viewports. Deployment and automated accessibility audit
+remain open; no product-scope expansion is authorized by this milestone.
 
 ### Objective
 
@@ -196,6 +198,9 @@ Build a polished, map-led decision-support experience centered on route trade-of
 
 ## Priority 6 — Professional Export Workflow
 
+**Status:** Core GeoJSON and CSV exports are implemented and browser-verified for
+the selected route. DXF remains conditional future work.
+
 ### Objective
 
 Provide useful downstream outputs consistent with a consulting/engineering handoff.
@@ -219,6 +224,9 @@ Provide useful downstream outputs consistent with a consulting/engineering hando
 - DXF does not introduce disproportionate complexity or unsupported CAD claims.
 
 ## Priority 7 — Validation, Documentation, Deployment, and Portfolio Readiness
+
+**Status:** Analytical and browser validation are complete for the current S1 MVP;
+deployment selection and verification remain.
 
 ### Objective
 

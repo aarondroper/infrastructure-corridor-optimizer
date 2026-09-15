@@ -2,6 +2,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 button { font: inherit; }
+button:focus, button:focus-visible { outline: 2px solid #d69552; outline-offset: 3px; }
 main { max-width: 1500px; margin: 0 auto; padding: 34px 42px 28px; }
 .masthead { display: flex; justify-content: space-between; gap: 30px; align-items: flex-end; padding: 8px 0 30px; }
 .eyebrow { margin: 0 0 9px; color: #a05b3c; font-size: .72rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
@@ -14,6 +15,13 @@ h2 { margin-bottom: 0; font-family: Georgia, serif; font-size: 1.7rem; font-weig
 .workspace { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(300px, .75fr); gap: 18px; }
 .map-wrap { position: relative; min-height: 600px; overflow: hidden; border: 1px solid #d9d7cc; background: #dfe8e4; }
 .map { position: absolute; inset: 0; }
+.route-overlay { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.route-line { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.route-line-muted { stroke: #196d72; stroke-width: 2; opacity: .42; }
+.route-line-casing { stroke: #102a31; stroke-width: 9; opacity: .95; }
+.route-line-selected { stroke: #e2a84b; stroke-width: 4; opacity: 1; }
+.route-endpoint circle { fill: #f5f0df; stroke: #102a31; stroke-width: 2; }
+.route-endpoint text { fill: #102a31; font-size: 12px; font-weight: 700; paint-order: stroke; stroke: #f5f0df; stroke-width: 3px; stroke-linejoin: round; }
 .map-caption, .map-badge { position: absolute; z-index: 1; padding: 8px 11px; background: rgba(244,241,233,.9); color: #547074; font-size: .72rem; }
 .map-caption { bottom: 12px; left: 12px; }
 .map-badge { top: 12px; left: 12px; color: #17363a; font-weight: 800; }

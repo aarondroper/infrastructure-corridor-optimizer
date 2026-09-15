@@ -12,3 +12,4 @@ data/source_probe.json
 web/node_modules/
 web/dist/
 web/tsconfig.tsbuildinfo
+web/artifacts/
