@@ -29,7 +29,9 @@ test("desktop production flow loads, switches routes, inspects impacts, and expo
   });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /One corridor, three defensible trade-offs/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Infrastructure Corridor Optimizer", exact: true })).toBeVisible();
+  await expect(page.getByText(/Hunter \/ New England, NSW · Scenario S1/)).toBeVisible();
+  await expect(page.getByText("One corridor, three defensible trade-offs.", { exact: true })).toHaveCount(0);
   const rootResponse = await page.request.get("/");
   expect(rootResponse.status()).toBe(200);
   const rootHtml = await rootResponse.text();
@@ -50,6 +52,10 @@ test("desktop production flow loads, switches routes, inspects impacts, and expo
   await expect(page.locator(".preset.selected")).toContainText("Balanced");
   await expect(page.locator(".map canvas")).toBeVisible();
   await expect(page.locator(".map-badge")).toContainText("Balanced");
+  await expect(page.locator(".app-shell > .strategy-rail")).toBeVisible();
+  await expect(page.locator(".app-shell > .map-column")).toBeVisible();
+  await expect(page.locator(".app-shell > .assessment-panel")).toBeVisible();
+  await expect(page.locator(".comparison-strip")).toBeVisible();
   await expect(page.locator(".map-wrap")).toHaveAttribute("data-map-layers", "basemap,route-overlay,endpoints,endpoint-labels");
   await expect(page.locator(".route-overlay")).toHaveAttribute("data-rendered-route-features", "3");
   await expect(page.locator(".route-overlay")).toHaveAttribute("data-rendered-endpoint-features", "2");
@@ -64,6 +70,10 @@ test("desktop production flow loads, switches routes, inspects impacts, and expo
     await expect(page.locator(".route-line-selected")).toHaveCount(1);
     await expect(page.locator(".route-line-selected")).toHaveAttribute("data-preset", preset.toLowerCase());
   }
+
+  await page.locator(".table-row").filter({ hasText: "Shortest" }).click();
+  await expect(page.locator(".assessment-panel h2")).toHaveText("Shortest route");
+  await page.locator(".preset").filter({ has: page.locator("strong", { hasText: /^Environmental$/ }) }).click();
 
   const firstDetails = page.locator(".inventory-details details").first();
   await firstDetails.locator("summary").click();

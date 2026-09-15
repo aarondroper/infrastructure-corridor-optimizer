@@ -266,7 +266,10 @@ The first verified implementation is `web/src/App.tsx`: it fetches the compact
 SVG overlay for route alternatives and endpoints, switches between approved presets,
 shows key assessment metrics and inventory counts, and exports the selected route as
 GeoJSON or a feature-level CSV. It does not run routing in the browser and currently
-uses OpenStreetMap raster tiles as a contextual basemap.
+uses OpenStreetMap raster tiles as a contextual basemap. Its current application shell
+places the existing strategy controls, map, and route assessment in a compact desktop
+grid, with a retained comparison strip below and intentional stacked tablet/mobile
+modes.
 
 The current visual system is implemented in `web/src/styles.css` and uses bundled
 Latin Source Sans 3 weights for the interface, tabular numerals for measurements, a

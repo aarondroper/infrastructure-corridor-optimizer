@@ -64,7 +64,9 @@ successful OpenStreetMap tile responses when the public tile service is reachabl
 
 The UI provides approved preset switching, key route metrics, compact impact counts,
 GeoJSON download, and a feature-level crossings CSV download. It remains a
-preliminary corridor-screening presentation, not engineering approval.
+preliminary corridor-screening presentation, not engineering approval. The current
+shell presents strategy, map, and assessment regions side by side on desktop, then
+uses map-first stacked tablet and strategy-first mobile layouts.
 
 ## Current limitations
 

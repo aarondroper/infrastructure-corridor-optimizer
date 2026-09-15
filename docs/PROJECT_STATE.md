@@ -49,8 +49,8 @@ are:
 - `docs/ROUTE_ASSESSMENT.md`: verified S1 route metrics, preset interpretation, and
   calibration classification;
 - `web/src/App.tsx`, `web/src/styles.css`, `web/src/main.tsx`, `web/tests/mvp.spec.ts`,
-  and `web/playwright.config.ts`: static application, Source Sans 3 visual system,
-  and bounded production-preview/browser verification;
+  and `web/playwright.config.ts`: static application shell, Source Sans 3 visual
+  system, and bounded production-preview/browser verification;
 
 There is still no verified evidence of:
 
@@ -150,8 +150,11 @@ bounded Chromium production-preview verification at desktop, laptop, tablet, and
 mobile viewports. MapLibre supplies the basemap and a synchronized SVG overlay
 supplies the precomputed route centerlines/endpoints; this avoids an observed
 MapLibre GeoJSON-worker loading failure while preserving the static architecture.
+The current shell is compact and map-first: desktop uses strategy rail, map, and
+assessment columns with an integrated comparison strip; tablet and mobile use
+intentional stacked layouts.
 The previously deployed public origin remains verified for commit `6c4d543`; the
-current visual-polish commit has not been publicly redeployed in this milestone.
+current application-shell commit has not been publicly redeployed in this milestone.
 
 ## Open Inputs / Limitations
 
@@ -217,6 +220,12 @@ Verified through 15 September 2026:
   Sans 3 assertion, error handling, responsive overflow, and OSM tile responses at
   1440×900, 1280×800, 768×1024, and 390×844. Screenshots were regenerated after a
   bounded basemap-render wait and visually inspected at all four viewports;
+- `ICO_PREVIEW_PORT=4181 PLAYWRIGHT_BROWSERS_PATH=/tmp/ico-browser-cache npm run test:browser`
+  in `web/` — all three production-preview tests passed after the application-shell
+  refactor, including shell-region assertions, slogan removal, comparison-row route
+  switching, impact inspection, exports, focus, error handling, responsive overflow,
+  and OSM tile responses at all four required viewports. The regenerated shell
+  screenshots were visually inspected;
 - `ICO_BASE_URL=https://infrastructure-corridor-optimizer.aaronroper.workers.dev ICO_STRICT_NETWORK=1 PLAYWRIGHT_BROWSERS_PATH=/tmp/ico-browser-cache npm run test:browser` in `web/` — all three public-origin tests passed at 1440×900, 1280×800, 768×1024, and 390×844, covering root reload, static assets, route switching, inspection, exports, responsive layout, error handling, focus, and OSM tile responses. Expected obsolete-tile `net::ERR_ABORTED` cancellations were excluded; no genuine network, console, or page errors were observed. Screenshots are retained under ignored `web/artifacts/browser-verification/`;
 - live artifact comparison — public `routes.json`, hashed JavaScript, and hashed CSS SHA-256 values match the local production build for commit `6c4d543`; hashed assets return `public, max-age=31536000, immutable`, while `routes.json` returns `public, max-age=0, must-revalidate`;
 - production artifact inspection — `web/dist/` contains `index.html`, hashed CSS/JS, `_headers`, and the 327,336-byte compact `data/routes.json`; the shell and analytical asset contain no local filesystem, development-host, raw-data, or cache references. `_headers` assigns immutable caching only to hashed `/assets/*` files;
@@ -255,9 +264,9 @@ The first analytical and static-MVP execution slice is complete: the approved S1
 source stack, geographic grid, A* routes, feature-level assessments, compact assets,
 local frontend build, and bounded browser verification are verified. The current
 preset evidence is classified as credible with no calibration currently justified;
-the comparison is recorded in `docs/ROUTE_ASSESSMENT.md`. The visual-system refinement
-is complete in the current tree and locally verified; the existing public origin
-still serves the prior verified build until this commit is deployed. The next
-frontier is the normal release of this visual commit and, separately, any owner-
-reviewed analytical calibration or future product scope. No engineering or
-regulatory approval is implied.
+the comparison is recorded in `docs/ROUTE_ASSESSMENT.md`. The visual-system and
+application-shell refinements are complete in the current tree and locally verified;
+the existing public origin still serves the prior verified build until this commit is
+deployed. The next frontier is the normal release of this shell commit and,
+separately, any owner-reviewed analytical calibration or future product scope. No
+engineering or regulatory approval is implied.

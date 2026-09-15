@@ -92,6 +92,60 @@ function csvCell(value: unknown): string {
   return /[",\n]/.test(text) ? `"${text.split('"').join('""')}"` : text;
 }
 
+function StrategyPanel({ data, selected, onSelect }: { data: AppData; selected: Preset; onSelect: (preset: Preset) => void }) {
+  return <aside className="strategy-rail" aria-label="Route strategy controls">
+    <div className="rail-heading">
+      <h2>Route strategy</h2>
+      <p>Select a precomputed route to inspect its trade-offs.</p>
+    </div>
+    <div className="preset-list">{data.routes.map((item) => <button className={`preset ${item.preset === selected ? "selected" : ""}`} key={item.preset} onClick={() => onSelect(item.preset)} aria-pressed={item.preset === selected}>
+      <span><strong>{PRESET_LABELS[item.preset]}</strong><small>{item.description}</small></span>
+    </button>)}</div>
+  </aside>;
+}
+
+function AssessmentPanel({ route, selected, csv }: { route: AppData["routes"][number]; selected: Preset; csv: string }) {
+  const inv = route.impact_inventory;
+  const native = inv.native_vegetation ?? {};
+  return <aside className="assessment-panel panel" aria-label="Route summary">
+    <div className="panel-heading">
+      <p className="panel-kicker">Route summary</p>
+      <h2>{PRESET_LABELS[selected]} route</h2>
+    </div>
+    <div className="selected-summary">
+      <div className="metric-primary"><span>Selected route</span><strong>{format(route.metrics.route_length_km, 2)} km</strong></div>
+      <div className="metric-grid">
+        <div><span>Mean slope</span><strong>{format(route.metrics.slope_mean_degrees)}°</strong></div>
+        <div><span>Native vegetation</span><strong>{native.native_vegetation_cell_count ?? "—"} cells</strong></div>
+        <div><span>Hydroline crossings</span><strong>{inv.hydrography_line?.crossing_feature_count ?? "—"}</strong></div>
+        <div><span>Major roads</span><strong>{inv.roads?.major_road_intersection_count ?? "—"}</strong></div>
+      </div>
+      <div className="inventory-summary"><span>Feature inventory</span><div>
+        {["Protected areas", "Hydro areas", "Road features", "Rail features"].map((label, index) => {
+          const count = [inv.protected_land?.intersected_feature_count, inv.hydrography_area?.interaction_feature_count, inv.roads?.intersected_feature_count, inv.railways?.crossing_feature_count][index];
+          return <span key={label}><strong>{count ?? "—"}</strong> {label}</span>;
+        })}
+      </div></div>
+      <div className="actions"><button onClick={() => download(`${selected}-route.geojson`, JSON.stringify(route.geometry, null, 2), "application/geo+json")}>Export GeoJSON</button><button onClick={() => download(`${selected}-crossings.csv`, csv, "text/csv")}>Export crossings CSV</button></div>
+      <div className="inventory-details"><span>Inspect intersected records</span>{Object.entries(inv).map(([component, layer]) => {
+        const entries = (layer.features ?? []).slice(0, 6);
+        const classes = (layer.classes ?? []).filter((entry: AnyRecord) => entry.value > 0).slice(0, 6);
+        return <details key={component}><summary>{component.split("_").join(" ")} <b>{layer.intersected_feature_count ?? layer.native_vegetation_cell_count ?? 0}</b></summary><ul>
+          {entries.map((entry: AnyRecord) => <li key={`${component}-${entry.source_object_id}`}>{entry.properties?.roadnamebase ?? entry.properties?.hydroname ?? entry.properties?.NAME ?? entry.source_object_id}{entry.major_road ? " · major" : ""}</li>)}
+          {classes.map((entry: AnyRecord) => <li key={`${component}-${entry.value}`}>{entry.PCTName ?? `PCT ${entry.value}`} · {entry.route_cell_count} cells</li>)}
+        </ul></details>;
+      })}</div>
+    </div>
+  </aside>;
+}
+
+function ComparisonStrip({ data, selected, onSelect }: { data: AppData; selected: Preset; onSelect: (preset: Preset) => void }) {
+  return <section className="comparison-strip" aria-labelledby="comparison-heading">
+    <div className="comparison-title"><p className="eyebrow">Route comparison</p><h2 id="comparison-heading">Evidence at a glance</h2></div>
+    <div className="comparison-table"><div className="table-head"><span>Preset</span><span>Length</span><span>Native veg.</span><span>Hydroline</span><span>Major roads</span></div>{data.routes.map((item) => { const itemInv = item.impact_inventory; return <button className={`table-row ${item.preset === selected ? "active" : ""}`} key={item.preset} onClick={() => onSelect(item.preset)} aria-pressed={item.preset === selected}><span>{PRESET_LABELS[item.preset]}</span><span>{format(item.metrics.route_length_km, 2)} km</span><span>{itemInv.native_vegetation?.native_vegetation_cell_count ?? "—"}</span><span>{itemInv.hydrography_line?.crossing_feature_count ?? "—"}</span><span>{itemInv.roads?.major_road_intersection_count ?? "—"}</span></button>; })}</div>
+  </section>;
+}
+
 function App() {
   const [data, setData] = useState<AppData | null>(null);
   const [selected, setSelected] = useState<Preset>("balanced");
@@ -101,19 +155,22 @@ function App() {
   if (error) return <main className="state"><h1>Corridor assets unavailable</h1><p>{error}</p></main>;
   if (!data || !route) return <main className="state"><p>Loading validated S1 routes…</p></main>;
   const inv = route.impact_inventory;
-  const native = inv.native_vegetation ?? {};
   const inventoryCsvRows = Object.entries(inv).flatMap(([component, layer]) => [
     ...(layer.features ?? []).map((feature: AnyRecord) => [selected, component, feature.source_object_id, feature.intersection_length_m ?? "", feature.major_road ?? "", feature.properties?.roadnamebase ?? feature.properties?.hydroname ?? feature.properties?.NAME ?? ""]),
     ...(layer.classes ?? []).filter((entry: AnyRecord) => entry.value > 0).map((entry: AnyRecord) => [selected, component, entry.value, "", "", entry.PCTName ?? ""]),
   ]);
   const csv = [["route_preset", "component", "source_object_id", "intersection_length_m", "major_road", "source_name"], ...inventoryCsvRows].map((row) => row.map(csvCell).join(",")).join("\n");
-  return <main>
-    <header className="masthead"><div><p className="eyebrow">Infrastructure Corridor Optimizer · Scenario {data.scenario}</p><h1>One corridor, three defensible trade-offs.</h1><p className="lede">Compare precomputed least-cost routes between Bayswater and Eraring using the approved screening model.</p></div><div className="status" aria-label="Route asset status"><span className="status-label">Offline route assets</span><span className="status-value">Validated · source-backed</span></div></header>
-    <section className="workspace">
-      <MapPanel data={data} selected={selected} />
-      <aside className="panel" aria-label="Route comparison controls"><div className="panel-heading"><h2>Route strategy</h2><p>Select a precomputed route to inspect its trade-offs.</p></div><div className="preset-list">{data.routes.map((item) => <button className={`preset ${item.preset === selected ? "selected" : ""}`} key={item.preset} onClick={() => setSelected(item.preset)} aria-pressed={item.preset === selected}><span><strong>{PRESET_LABELS[item.preset]}</strong><small>{item.description}</small></span></button>)}</div><div className="selected-summary"><div className="metric-primary"><span>Selected route</span><strong>{format(route.metrics.route_length_km, 2)} km</strong></div><div className="metric-grid"><div><span>Mean slope</span><strong>{format(route.metrics.slope_mean_degrees)}°</strong></div><div><span>Native vegetation</span><strong>{native.native_vegetation_cell_count ?? "—"} cells</strong></div><div><span>Hydroline crossings</span><strong>{inv.hydrography_line?.crossing_feature_count ?? "—"}</strong></div><div><span>Major roads</span><strong>{inv.roads?.major_road_intersection_count ?? "—"}</strong></div></div><div className="inventory-summary"><span>Feature inventory</span><div>{[["Protected areas", inv.protected_land?.intersected_feature_count], ["Hydro areas", inv.hydrography_area?.interaction_feature_count], ["Road features", inv.roads?.intersected_feature_count], ["Rail features", inv.railways?.crossing_feature_count]].map(([label, count]) => <span key={label as string}><strong>{count ?? "—"}</strong> {label}</span>)}</div></div><div className="inventory-details"><span>Inspect intersected records</span>{Object.entries(inv).map(([component, layer]) => { const entries = (layer.features ?? []).slice(0, 6); const classes = (layer.classes ?? []).filter((entry: AnyRecord) => entry.value > 0).slice(0, 6); return <details key={component}><summary>{component.split("_").join(" ")} <b>{layer.intersected_feature_count ?? layer.native_vegetation_cell_count ?? 0}</b></summary><ul>{entries.map((entry: AnyRecord) => <li key={`${component}-${entry.source_object_id}`}>{entry.properties?.roadnamebase ?? entry.properties?.hydroname ?? entry.properties?.NAME ?? entry.source_object_id}{entry.major_road ? " · major" : ""}</li>)}{classes.map((entry: AnyRecord) => <li key={`${component}-${entry.value}`}>{entry.PCTName ?? `PCT ${entry.value}`} · {entry.route_cell_count} cells</li>)}</ul></details>; })}</div></div><div className="actions"><button onClick={() => download(`${selected}-route.geojson`, JSON.stringify(route.geometry, null, 2), "application/geo+json")}>Export GeoJSON</button><button onClick={() => download(`${selected}-crossings.csv`, csv, "text/csv")}>Export crossings CSV</button></div></aside>
+  return <main className="app-frame">
+    <header className="app-header">
+      <div className="brand"><h1>Infrastructure Corridor Optimizer</h1><p>Preliminary corridor screening · Hunter / New England, NSW · Scenario {data.scenario}</p></div>
+      <div className="status" role="status" aria-label="Route asset status"><span className="status-label">Offline route assets</span><span className="status-value">Validated · source-backed</span></div>
+    </header>
+    <section className="app-shell" aria-label="Corridor route workspace">
+      <StrategyPanel data={data} selected={selected} onSelect={setSelected} />
+      <section className="map-column" aria-label="Route map"><MapPanel data={data} selected={selected} /></section>
+      <AssessmentPanel route={route} selected={selected} csv={csv} />
     </section>
-    <section className="comparison"><div><p className="eyebrow">Evidence at a glance</p><h2>What changes between the presets?</h2></div><div className="comparison-table"><div className="table-head"><span>Preset</span><span>Length</span><span>Native veg.</span><span>Hydroline</span><span>Major roads</span></div>{data.routes.map((item) => { const itemInv = item.impact_inventory; return <button className={`table-row ${item.preset === selected ? "active" : ""}`} key={item.preset} onClick={() => setSelected(item.preset)}><span>{PRESET_LABELS[item.preset]}</span><span>{format(item.metrics.route_length_km, 2)} km</span><span>{itemInv.native_vegetation?.native_vegetation_cell_count ?? "—"}</span><span>{itemInv.hydrography_line?.crossing_feature_count ?? "—"}</span><span>{itemInv.roads?.major_road_intersection_count ?? "—"}</span></button>; })}</div></section>
+    <ComparisonStrip data={data} selected={selected} onSelect={setSelected} />
     <footer><p>{data.disclaimer}</p><p>Base map © OpenStreetMap contributors · approved environmental and crossing layers are summarized in the route assessment.</p></footer>
   </main>;
 }
