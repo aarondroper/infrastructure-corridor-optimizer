@@ -164,8 +164,9 @@ the verified `workers.dev` origin. The React/TypeScript + MapLibre app builds an
 compares precomputed routes, exposes impact inspection and working GeoJSON/CSV
 exports, and has passed public-origin Chromium verification at
 desktop/laptop/tablet/mobile viewports. A focused Source Sans 3/map-first visual
-refinement and application-shell refactor are now implemented and verified against
-the production preview at all required viewports; the current public origin still
+refinement, application-shell refactor, and follow-on density polish are now
+implemented and verified against the production preview at all required viewports;
+the current public origin still
 serves the prior verified build until this commit is released. Automated accessibility
 auditing remains open; no
 product-scope expansion is authorized by this milestone.

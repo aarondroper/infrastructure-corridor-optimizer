@@ -41,7 +41,8 @@ directory to `dist` relative to that root. No environment variables or server-si
 Cloudflare features are required. The checked-in `web/public/_headers` file applies a
 long immutable cache lifetime only to Vite's hashed `/assets/*` files. The deployment
 is public and verified at the documented `workers.dev` origin. The current
-visual-polish changes are production-preview verified locally and will take effect
+visual-polish and density-refinement changes are production-preview verified locally
+and will take effect
 publicly when the normal Cloudflare release workflow publishes this commit. The
 public-origin checklist remains in
 `docs/DEPLOYMENT_CLOUDFLARE_PAGES.md`.
@@ -75,7 +76,7 @@ uses map-first stacked tablet and strategy-first mobile layouts.
 - Feature inventories count intersected source records. Hydroline, road, and rail
   source segmentation can yield multiple records for one named physical crossing.
 - The app has passed the bounded browser and visual review above. It has no automated
-  accessibility audit yet, and the current visual-polish commit has not yet been
+  accessibility audit yet, and the current density-refinement commit has not yet been
   reverified on the public origin. The route centerlines and endpoints are rendered as a
   camera-synchronized SVG overlay over the MapLibre basemap; the analytical route
   and assessment data remain static and precomputed.

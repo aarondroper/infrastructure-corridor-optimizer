@@ -24,6 +24,12 @@ const PRESET_LABELS: Record<Preset, string> = {
   environmental: "Environmental",
 };
 
+const PRESET_UI_DESCRIPTIONS: Record<Preset, string> = {
+  shortest: "Minimizes route length while retaining visible constraint trade-offs.",
+  balanced: "Balances length, terrain, environmental sensitivity, and crossings.",
+  environmental: "Prioritizes lower environmental sensitivity while retaining a length control.",
+};
+
 function format(value: number | null | undefined, digits = 1): string {
   return value == null || Number.isNaN(value) ? "—" : value.toFixed(digits);
 }
@@ -99,7 +105,7 @@ function StrategyPanel({ data, selected, onSelect }: { data: AppData; selected: 
       <p>Select a precomputed route to inspect its trade-offs.</p>
     </div>
     <div className="preset-list">{data.routes.map((item) => <button className={`preset ${item.preset === selected ? "selected" : ""}`} key={item.preset} onClick={() => onSelect(item.preset)} aria-pressed={item.preset === selected}>
-      <span><strong>{PRESET_LABELS[item.preset]}</strong><small>{item.description}</small></span>
+      <span><strong>{PRESET_LABELS[item.preset]}</strong><small>{PRESET_UI_DESCRIPTIONS[item.preset]}</small></span>
     </button>)}</div>
   </aside>;
 }
@@ -141,7 +147,7 @@ function AssessmentPanel({ route, selected, csv }: { route: AppData["routes"][nu
 
 function ComparisonStrip({ data, selected, onSelect }: { data: AppData; selected: Preset; onSelect: (preset: Preset) => void }) {
   return <section className="comparison-strip" aria-labelledby="comparison-heading">
-    <div className="comparison-title"><p className="eyebrow">Route comparison</p><h2 id="comparison-heading">Evidence at a glance</h2></div>
+    <div className="comparison-title"><h2 id="comparison-heading">Route comparison</h2><p>Evidence at a glance</p></div>
     <div className="comparison-table"><div className="table-head"><span>Preset</span><span>Length</span><span>Native veg.</span><span>Hydroline</span><span>Major roads</span></div>{data.routes.map((item) => { const itemInv = item.impact_inventory; return <button className={`table-row ${item.preset === selected ? "active" : ""}`} key={item.preset} onClick={() => onSelect(item.preset)} aria-pressed={item.preset === selected}><span>{PRESET_LABELS[item.preset]}</span><span>{format(item.metrics.route_length_km, 2)} km</span><span>{itemInv.native_vegetation?.native_vegetation_cell_count ?? "—"}</span><span>{itemInv.hydrography_line?.crossing_feature_count ?? "—"}</span><span>{itemInv.roads?.major_road_intersection_count ?? "—"}</span></button>; })}</div>
   </section>;
 }
