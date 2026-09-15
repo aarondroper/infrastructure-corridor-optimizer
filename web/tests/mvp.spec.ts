@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import fs from "node:fs/promises";
 
 const screenshotRoot = "artifacts/browser-verification";
+const strictNetwork = process.env.ICO_STRICT_NETWORK === "1";
 
 async function attachIssueCapture(page: Page) {
   const issues: string[] = [];
@@ -11,7 +12,11 @@ async function attachIssueCapture(page: Page) {
   page.on("pageerror", (error) => issues.push(`pageerror: ${error.message}`));
   page.on("requestfailed", (request) => {
     const url = request.url();
-    if (!url.includes("tile.openstreetmap.org")) issues.push(`request: ${url} · ${request.failure()?.errorText ?? "failed"}`);
+    const failure = request.failure()?.errorText ?? "failed";
+    const expectedTileCancellation = url.includes("tile.openstreetmap.org") && failure === "net::ERR_ABORTED";
+    if (!expectedTileCancellation && (strictNetwork || !url.includes("tile.openstreetmap.org"))) {
+      issues.push(`request: ${url} · ${failure}`);
+    }
   });
   return issues;
 }

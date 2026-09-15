@@ -402,13 +402,14 @@ Substituting an approved important dataset with a materially different source is
 
 The selected deployment target for the current MVP is Cloudflare Pages. The verified
 repository configuration is a static Vite build from the `web/` project root with
-`npm run build` producing `dist`. Live publication and public-origin verification are
-not yet complete.
+`npm run build` producing `dist`. A live Cloudflare static origin is verified at the
+corrected `workers.dev` hostname, but Pages-specific project identity and account
+source-commit metadata are not exposed by that public response.
 
 Implemented characteristics:
 
-- frontend served from inexpensive static/edge hosting, pending account-authorized
-  publication;
+- frontend served from inexpensive static/edge hosting, with the live Cloudflare
+  origin verified;
 - analytical outputs produced during build/preprocessing;
 - no always-on GIS server;
 - no paid service dependency or Cloudflare server-side feature;
@@ -418,7 +419,7 @@ Cloudflare Pages applies the checked-in `web/public/_headers` metadata to cache 
 Vite assets as immutable. The stable analytical JSON asset is intentionally not given
 an immutable cache directive. No rewrite configuration is required while the MVP has
 only the root application URL. See `docs/DEPLOYMENT_CLOUDFLARE_PAGES.md` for the
-account-authorized setup and post-deployment checks.
+Pages setup, live verification evidence, and remaining account-level identity check.
 
 ## Important Technical Boundaries
 

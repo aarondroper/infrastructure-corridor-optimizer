@@ -53,8 +53,9 @@ are:
 
 There is still no verified evidence of:
 
-- a live public application; Cloudflare Pages repository configuration is prepared and
-  documented, but account-authorized publication has not occurred;
+- account-level Cloudflare project metadata; the live static application is verified at
+  the corrected `workers.dev` origin, but the public response does not identify a
+  Pages project name or source commit;
 - CI or linting configuration;
 - a DXF export or arbitrary client-side routing.
 
@@ -166,12 +167,15 @@ and representative live endpoints. The following inputs remain unresolved:
 
 ## Deployment State
 
-Cloudflare Pages is the selected deployment target. The repository is prepared for a
-Git-integrated Pages project with root directory `web`, build command `npm run build`,
-output directory `dist`, and no environment variables or server-side features. The
-production artifact was built and browser-tested locally through `vite preview`.
-No public deployment is verified; account authorization and GitHub integration remain
-owner-controlled.
+Cloudflare Pages remains the selected repository deployment target, with root
+directory `web`, build command `npm run build`, output directory `dist`, and no
+environment variables. The static application is live and verified at
+`https://infrastructure-corridor-optimizer.aaronroper.workers.dev/`; the supplied
+hostname omitted the initial `i` and does not resolve. The live route JSON and hashed
+CSS/JavaScript match the local production artifact for commit `6c4d543` byte-for-byte.
+Because the public hostname is `workers.dev`, the live response alone cannot confirm
+whether the account used Pages or an intentional Worker alias, nor can it expose the
+Cloudflare project name or source commit metadata.
 
 See `docs/DEPLOYMENT_CLOUDFLARE_PAGES.md` for exact setup and post-deployment checks.
 
@@ -203,7 +207,8 @@ Verified through 15 September 2026:
 - `PYTHONPATH=src python3 scripts/build_web_assets.py ...` — published a 327,336-byte static asset containing the three route geometries, metrics, compact impact inventories, endpoint features, comparison data, and screening disclaimer with raw source paths removed;
 - `npm install` in `web/` — installed the declared React/TypeScript/MapLibre and Playwright browser-test dependencies;
 - `npm run build` in `web/` — TypeScript and Vite production build succeeded; the MapLibre bundle-size warning remains expected for the initial MVP;
-- `ICO_PREVIEW_PORT=4174 PLAYWRIGHT_BROWSERS_PATH=/tmp/ico-browser-cache npm run test:browser` in `web/` — three production-preview tests passed against the rebuilt artifact: root load/reload, static shell/data asset responses, desktop route switching/inspection/exports, initial-load responsive checks at 1280×800, 768×1024, and 390×844, failed-asset error handling, and successful OpenStreetMap tile responses. Screenshots are retained under ignored `web/artifacts/browser-verification/`;
+- `ICO_BASE_URL=https://infrastructure-corridor-optimizer.aaronroper.workers.dev ICO_STRICT_NETWORK=1 PLAYWRIGHT_BROWSERS_PATH=/tmp/ico-browser-cache npm run test:browser` in `web/` — all three public-origin tests passed at 1440×900, 1280×800, 768×1024, and 390×844, covering root reload, static assets, route switching, inspection, exports, responsive layout, error handling, focus, and OSM tile responses. Expected obsolete-tile `net::ERR_ABORTED` cancellations were excluded; no genuine network, console, or page errors were observed. Screenshots are retained under ignored `web/artifacts/browser-verification/`;
+- live artifact comparison — public `routes.json`, hashed JavaScript, and hashed CSS SHA-256 values match the local production build for commit `6c4d543`; hashed assets return `public, max-age=31536000, immutable`, while `routes.json` returns `public, max-age=0, must-revalidate`;
 - production artifact inspection — `web/dist/` contains `index.html`, hashed CSS/JS, `_headers`, and the 327,336-byte compact `data/routes.json`; the shell and analytical asset contain no local filesystem, development-host, raw-data, or cache references. `_headers` assigns immutable caching only to hashed `/assets/*` files;
 - the browser review confirmed visible route centerlines/endpoints, map controls and bounds, route switching, feature inspection, keyboard focus, no horizontal overflow, and no captured application console/page/runtime errors or local-asset request failures. OpenStreetMap tile requests remain an external runtime dependency;
 - bounded count-only probes returned 216,808 SVTM and 68,320 Hydroline features; 20-feature geometry samples measured approximately 8.1 KB and 0.77 KB per serialized feature respectively. No full SVTM vector artifact was published; the official classified raster representation is validated and accepted.
@@ -216,7 +221,9 @@ Verified through 15 September 2026:
 - `PYTHONPATH=src python3 scripts/acquire_svtm_package.py --cache-dir data/cache/seed/svtm-c2.0.m2.2 --output-dir data/external/vectors/svtm-package --timeout 15 --max-retries 0` — bounded package probe wrote only a 423-byte persistent state record and failed safely on the official endpoint's HTTP 202 web challenge; no archive bytes were materialized.
 
 No dedicated linting/type-check command beyond the successful TypeScript compiler,
-no automated accessibility audit and no public deployment verification exists yet. Git status
+no automated accessibility audit exists yet. Public deployment verification is complete
+for the live Cloudflare origin, while Pages-vs-Worker account identity remains an owner
+check. Git status
 and diff checks are available and are run before commits.
 
 ## Owner Decision Status
@@ -238,7 +245,7 @@ The first analytical and static-MVP execution slice is complete: the approved S1
 source stack, geographic grid, A* routes, feature-level assessments, compact assets,
 local frontend build, and bounded browser verification are verified. The current
 preset evidence is classified as credible with no calibration currently justified;
-the comparison is recorded in `docs/ROUTE_ASSESSMENT.md`. The next frontier is
-Cloudflare Pages account-authorized publication/public-origin verification and only
-then any separately authorized product polish or owner-reviewed analytical calibration.
-No engineering or regulatory approval is implied.
+the comparison is recorded in `docs/ROUTE_ASSESSMENT.md`. The next frontier is the
+account-level confirmation of the live Cloudflare delivery product/project identity,
+followed by only separately authorized product polish or owner-reviewed analytical
+calibration. No engineering or regulatory approval is implied.

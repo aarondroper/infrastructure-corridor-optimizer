@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const previewPort = Number(process.env.ICO_PREVIEW_PORT ?? "4173");
+const publicBaseUrl = process.env.ICO_BASE_URL?.replace(/\/$/, "");
 
 export default defineConfig({
   testDir: "./tests",
@@ -9,14 +10,14 @@ export default defineConfig({
   forbidOnly: true,
   reporter: [["list"], ["json", { outputFile: "./artifacts/browser-results.json" }]],
   use: {
-    baseURL: `http://127.0.0.1:${previewPort}`,
+    baseURL: publicBaseUrl ?? `http://127.0.0.1:${previewPort}`,
     browserName: "chromium",
     headless: true,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     ...devices["Desktop Chrome"],
   },
-  webServer: {
+  webServer: publicBaseUrl ? undefined : {
     command: `npm run preview -- --host 127.0.0.1 --port ${previewPort}`,
     url: `http://127.0.0.1:${previewPort}`,
     reuseExistingServer: false,

@@ -159,12 +159,12 @@ Produce professional route-impact metrics, crossing inventories, and compact web
 
 ## Priority 5 — Interactive Web Application
 
-**Status:** Core static comparison slice browser-verified and prepared for Cloudflare
-Pages. The React/TypeScript + MapLibre app builds and compares precomputed routes,
-exposes impact inspection and working GeoJSON/CSV exports, and has passed bounded
-Chromium verification at desktop/laptop/tablet/mobile viewports. Live deployment and
-automated accessibility audit remain open; no product-scope expansion is authorized
-by this milestone.
+**Status:** Core static comparison slice browser-verified and live on Cloudflare at
+the verified `workers.dev` origin. The React/TypeScript + MapLibre app builds and
+compares precomputed routes, exposes impact inspection and working GeoJSON/CSV
+exports, and has passed public-origin Chromium verification at
+desktop/laptop/tablet/mobile viewports. Automated accessibility auditing remains open;
+no product-scope expansion is authorized by this milestone.
 
 ### Objective
 
@@ -226,9 +226,11 @@ Provide useful downstream outputs consistent with a consulting/engineering hando
 
 ## Priority 7 — Validation, Documentation, Deployment, and Portfolio Readiness
 
-**Status:** Analytical and browser validation are complete; Cloudflare Pages
-configuration and local production-build verification are complete. Account-authorized
-publication and public-origin verification remain.
+**Status:** MVP deployment and public-origin verification are complete for the live
+Cloudflare static origin. The supplied hostname had a missing initial `i`; the
+corrected `workers.dev` hostname is verified. Cloudflare dashboard confirmation of
+Pages-vs-Worker delivery, project name, and account-linked deployed commit remains an
+owner action.
 
 ### Objective
 
@@ -242,8 +244,8 @@ Bring the project from functional prototype to a credible public portfolio deliv
 - documented limitations and professional-use disclaimer;
 - optimized frontend and data payloads;
 - public repository cleanup;
-- Cloudflare Pages static deployment;
-- deployment verification;
+- live Cloudflare static deployment;
+- Pages-specific account/project identity confirmation;
 - screenshots and supporting case-study material.
 
 ### Important Dependencies

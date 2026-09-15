@@ -2,9 +2,18 @@
 
 ## Status
 
-The repository is prepared for Cloudflare Pages, but no public deployment has been
-created or verified. Cloudflare account authorization and GitHub repository access are
-the only remaining deployment steps for this milestone.
+The static application is live and verified at
+`https://infrastructure-corridor-optimizer.aaronroper.workers.dev/`. The hostname
+supplied for verification omitted the initial `i` and does not resolve. The live
+hostname is a `workers.dev` origin rather than the documented `pages.dev` origin, so
+the public response does not establish a Cloudflare Pages project name or expose the
+account's source commit metadata. The deployed shell, route asset, and hashed bundles
+do match the local production artifact for commit `6c4d543` byte-for-byte.
+
+The application is therefore verified as a live Cloudflare static deployment. The
+owner should confirm in the Cloudflare dashboard whether this `workers.dev` hostname
+is an intentional alias or a separate Worker delivery. No Pages-specific project
+identity is claimed from HTTP evidence alone.
 
 ## Application shape
 
@@ -68,6 +77,27 @@ The build shell and compact analytical asset contain no local filesystem paths,
 development hostnames, or raw/cache source references. `web/dist/` remains ignored by
 Git, as do source GIS data and caches.
 
+## Live production verification
+
+On 15 September 2026, bounded HTTPS checks returned `200` for the root shell,
+`/data/routes.json`, hashed JavaScript, and hashed CSS. The public route JSON was
+327,336 bytes with three routes and two endpoints, and its SHA-256 matched the local
+asset:
+
+`35eeb0995773d6ebc4ca65653666da226d902cb0926f8a8ca305a95a0e8f6127`
+
+The public JavaScript and CSS SHA-256 values also matched the local build. Cloudflare
+served `public, max-age=31536000, immutable` for both hashed assets and
+`public, max-age=0, must-revalidate` for the stable route JSON, as intended.
+
+The public-origin Playwright suite passed all three tests at 1440×900, 1280×800,
+768×1024, and 390×844. It verified root reload, route switching, endpoint/route
+visibility, impact inspection, statistics, GeoJSON and CSV exports, focus behavior,
+responsive layout, asset failure handling, and successful OpenStreetMap responses.
+Strict network capture found no console/page errors or genuine failed requests. It did
+observe expected `net::ERR_ABORTED` cancellations for obsolete OSM tiles while MapLibre
+settled the camera; successful tile responses were also observed.
+
 ## Owner deployment steps
 
 1. In Cloudflare, open **Workers & Pages → Create application → Pages → Connect to
@@ -77,16 +107,17 @@ Git, as do source GIS data and caches.
 4. Set **Build command** to `npm run build` and **Build output directory** to `dist`.
 5. Leave environment variables empty and deploy.
 6. Return the resulting `*.pages.dev` URL and deployed commit, if shown, for final
-   browser/network/export verification.
+   Pages-specific verification. The currently verified public origin is the
+   `workers.dev` URL recorded above.
 
 The Git integration method is preferred because it provides commit-linked builds and
 preview deployments. A direct upload is not needed for this repository. Pages can
 publish the static output without any additional Cloudflare service.
 
-## Post-deployment verification
+## Remaining account-level check
 
-The public URL must still be verified before `PROJECT_STATE.md` can claim deployment
-completion. Check the root load and reload at desktop and narrow/mobile widths, route
-switching, exports, the `/data/routes.json` response, hashed asset responses, browser
-console/runtime errors, failed requests, and OpenStreetMap tile behavior. Confirm that
-the deployed commit matches the intended repository commit.
+The public application has passed live verification, but the Cloudflare account
+dashboard should confirm the project name, delivery product, source repository, and
+deployed commit. If this is a Worker rather than a Pages project, either document that
+intentional deviation or create the Pages Git-integrated deployment described above;
+do not infer the project identity from the `workers.dev` hostname alone.
