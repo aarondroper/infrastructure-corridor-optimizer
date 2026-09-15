@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Validate local DEM sidecars and select the configured terrain source."""
 
 from __future__ import annotations
@@ -7,19 +6,13 @@ import argparse
 import json
 from pathlib import Path
 
+from ico_model.config import load_config
 from ico_model.terrain import (
     TerrainArtifactError,
     load_terrain_artifact_metadata,
     select_terrain_artifact,
     write_terrain_selection,
 )
-
-
-def load_config(path: Path) -> dict:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise TerrainArtifactError("model configuration must be a JSON object")
-    return payload
 
 
 def main() -> int:

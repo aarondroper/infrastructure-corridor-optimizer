@@ -58,7 +58,7 @@ test("desktop production flow loads, switches routes, inspects impacts, and expo
   const rootHtml = await rootResponse.text();
   expect(rootHtml).toContain("/assets/");
   expect(rootHtml).not.toMatch(/(?:file:\/\/|\/home\/|\/tmp\/|127\.0\.0\.1|localhost)/);
-  const localAssetPaths = [...rootHtml.matchAll(/(?:src|href)=\"(\/assets\/[^\"]+)\"/g)].map((match) => match[1]);
+  const localAssetPaths = [...rootHtml.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map((match) => match[1]);
   expect(localAssetPaths.length).toBeGreaterThan(0);
   for (const assetPath of localAssetPaths) {
     expect((await page.request.get(assetPath)).status(), assetPath).toBe(200);

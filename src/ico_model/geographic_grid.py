@@ -6,7 +6,7 @@ import hashlib
 import json
 import math
 from contextlib import ExitStack
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -34,7 +34,7 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _arcgis_geometry_to_shape(geometry: Mapping[str, Any], geometry_type: str) -> tuple[Any, bool]:
-    from shapely.geometry import LineString, MultiLineString, Polygon, shape
+    from shapely.geometry import LineString, MultiLineString, shape
     from shapely.validation import make_valid
 
     try:

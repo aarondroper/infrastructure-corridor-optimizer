@@ -41,6 +41,10 @@ provide the following implemented stages:
 - independent physical route assessment, feature inventories, and exports;
 - packaging of the selected scenario into `web/public/data/routes.json`.
 
+Shared model-configuration loading lives in `src/ico_model/config.py`; command
+scripts and tests use that package module rather than importing configuration
+logic from another CLI script.
+
 The analytical configuration is versioned at `config/model.json`. Route geometry,
 metrics, inventories, and export schemas are generated outputs; they are not
 manually drawn or changed for presentation.
@@ -60,8 +64,10 @@ source-specific acquisition commands are documented in
 
 ## Web application
 
-The `web/` application is a static React/TypeScript build. `App.tsx` loads the
-compact route asset, switches among the three precomputed strategies, presents
+The `web/` application is a static React/TypeScript build. `routeData.ts` owns
+the typed runtime contract for the compact route asset and rejects malformed
+responses before `App.tsx` uses them. `App.tsx` then loads the validated asset,
+switches among the three precomputed strategies, presents
 the route assessment and comparison dock, and provides the existing GeoJSON and
 CSV downloads. MapLibre supplies the OpenStreetMap-based contextual map and
 controls. A camera-synchronized SVG overlay renders the route centerlines and

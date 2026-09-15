@@ -72,8 +72,9 @@ optional geospatial processing uses the `geospatial` extra.
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
-pip install -e '.[geospatial]'
+pip install -e '.[geospatial,test]'
 PYTHONPATH=src python3 -m unittest discover -s tests -v
+ruff check .
 ```
 
 Large source acquisition and analytical regeneration are documented in
@@ -84,7 +85,10 @@ To build and preview the frontend:
 
 ```bash
 cd web
-npm install
+npm ci
+npm run typecheck
+npm run lint
+npm run test:unit
 npm run build
 npm run preview
 ```
@@ -104,6 +108,10 @@ OpenStreetMap tile responses:
 cd web
 npm run test:browser
 ```
+
+The repository workflow runs the deterministic Python and frontend source checks
+on pushes and pull requests. It does not acquire GIS sources, rebuild analytical
+outputs, call live ArcGIS services, or deploy the application.
 
 ## Reproducibility
 

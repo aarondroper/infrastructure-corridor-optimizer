@@ -1,22 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
-import type { Map } from "maplibre-gl";
+import type { Map, StyleSpecification } from "maplibre-gl";
+import { parseRouteData, type InventoryFeature, type Preset, type RouteData as ContractData } from "./routeData";
 
-type Preset = "shortest" | "balanced" | "environmental";
-type AnyRecord = Record<string, any>;
-type AppData = {
-  scenario: string;
-  disclaimer: string;
-  endpoints: AnyRecord;
-  routes: Array<{
-    preset: Preset;
-    description: string;
-    geometry: AnyRecord;
-    metrics: AnyRecord;
-    impact_inventory: AnyRecord;
-  }>;
-  comparison: AnyRecord;
-};
+type AppData = ContractData;
 
 const PRESET_LABELS: Record<Preset, string> = {
   shortest: "Shortest",
@@ -44,10 +31,10 @@ function MapPanel({ data, selected }: { data: AppData; selected: Preset }) {
   useEffect(() => {
     if (!container.current) return;
     const allCoordinates = data.routes.flatMap((route) => route.geometry.geometry.coordinates);
-    const endpointCoordinates = data.endpoints.features.map((feature: AnyRecord) => feature.geometry.coordinates);
+    const endpointCoordinates = data.endpoints.features.map((feature) => feature.geometry.coordinates);
     const bounds = new maplibregl.LngLatBounds();
     [...allCoordinates, ...endpointCoordinates].forEach(([lng, lat]) => bounds.extend([lng, lat]));
-    const style: AnyRecord = {
+    const style: StyleSpecification = {
       version: 8,
       sources: {
         osm: {
@@ -59,7 +46,7 @@ function MapPanel({ data, selected }: { data: AppData; selected: Preset }) {
       },
       layers: [{ id: "osm", type: "raster", source: "osm" }],
     };
-    const instance = new maplibregl.Map({ container: container.current, style: style as any, bounds, fitBoundsOptions: { padding: 72 } });
+    const instance = new maplibregl.Map({ container: container.current, style, bounds, fitBoundsOptions: { padding: 72 } });
     instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     const updateOverlay = () => setCameraRevision((revision) => revision + 1);
     const resizeObserver = new ResizeObserver(() => { instance.resize(); updateOverlay(); });
@@ -72,14 +59,14 @@ function MapPanel({ data, selected }: { data: AppData; selected: Preset }) {
     return () => { resizeObserver.disconnect(); instance.off("move", updateOverlay); instance.off("resize", updateOverlay); instance.remove(); map.current = null; setMapInstance(null); };
   }, [data]);
 
-  const projectedRoutes = mapInstance ? data.routes.map((route) => ({ ...route, points: route.geometry.geometry.coordinates.map(([lng, lat]: number[]) => { const point = mapInstance.project([lng, lat]); return `${point.x},${point.y}`; }).join(" ") })) : [];
-  const projectedEndpoints = mapInstance ? data.endpoints.features.map((feature: AnyRecord) => ({ ...feature, point: mapInstance.project(feature.geometry.coordinates) })) : [];
+  const projectedRoutes = mapInstance ? data.routes.map((route) => ({ ...route, points: route.geometry.geometry.coordinates.map(([lng, lat]) => { const point = mapInstance.project([lng, lat]); return `${point.x},${point.y}`; }).join(" ") })) : [];
+  const projectedEndpoints = mapInstance ? data.endpoints.features.map((feature) => ({ ...feature, point: mapInstance.project(feature.geometry.coordinates) })) : [];
   return <div className="map-wrap" data-map-layers="loading">
     <div ref={container} className="map" aria-label={`Map showing the ${PRESET_LABELS[selected]} route`} />
     {mapInstance && <svg className="route-overlay" role="img" aria-label="Precomputed route overlay" data-rendered-route-features={projectedRoutes.length} data-rendered-endpoint-features={projectedEndpoints.length}>
       {projectedRoutes.filter((route) => route.preset !== selected).map((route) => <polyline key={`${route.preset}-muted`} className={`route-line route-line-${route.preset}`} data-preset={route.preset} points={route.points} />)}
       {projectedRoutes.filter((route) => route.preset === selected).map((route) => <g key={`${route.preset}-selected`}><polyline className="route-line route-line-casing" data-preset={route.preset} points={route.points} /><polyline className={`route-line route-line-selected route-line-selected-${route.preset}`} data-preset={route.preset} points={route.points} /></g>)}
-      {projectedEndpoints.map((endpoint: AnyRecord) => <g key={endpoint.properties.name} className="route-endpoint"><circle cx={endpoint.point.x} cy={endpoint.point.y} r="6" /><text x={endpoint.point.x} y={endpoint.point.y + (endpoint.properties.role === "destination" ? -10 : 21)}>{endpoint.properties.name}</text></g>)}
+      {projectedEndpoints.map((endpoint) => <g key={endpoint.properties.name} className="route-endpoint"><circle cx={endpoint.point.x} cy={endpoint.point.y} r="6" /><text x={endpoint.point.x} y={endpoint.point.y + (endpoint.properties.role === "destination" ? -10 : 21)}>{endpoint.properties.name}</text></g>)}
     </svg>}
     <div className="map-legend" aria-label="Candidate routes"><span className="map-legend-heading">Candidate routes</span>{data.routes.map((route) => <div className={`map-legend-item ${route.preset === selected ? "selected" : ""}`} key={route.preset}><span className={`route-swatch route-swatch-${route.preset}`} aria-hidden="true" /><span>{PRESET_LABELS[route.preset]}</span>{route.preset === selected && <span className="legend-selected">Selected</span>}</div>)}</div>
     <div className="map-caption">S1 · 100 m analysis grid · route centerlines shown for preliminary screening</div>{selectedRoute && <div className="map-badge" role="status"><span className={`route-swatch route-swatch-${selected}`} aria-hidden="true" />{PRESET_LABELS[selected]} route selected</div>}
@@ -97,6 +84,14 @@ function download(name: string, content: string, type: string) {
 function csvCell(value: unknown): string {
   const text = value == null ? "" : String(value);
   return /[",\n]/.test(text) ? `"${text.split('"').join('""')}"` : text;
+}
+
+function featureName(properties: InventoryFeature["properties"], fallback: number): string | number {
+  for (const key of ["roadnamebase", "hydroname", "NAME"]) {
+    const value = properties[key];
+    if (typeof value === "string" && value.trim() !== "") return value;
+  }
+  return fallback;
 }
 
 function StrategyPanel({ data, selected, onSelect }: { data: AppData; selected: Preset; onSelect: (preset: Preset) => void }) {
@@ -136,10 +131,10 @@ function AssessmentPanel({ route, selected, csv }: { route: AppData["routes"][nu
       <div className="actions"><button onClick={() => download(`${selected}-route.geojson`, JSON.stringify(route.geometry, null, 2), "application/geo+json")}>Export GeoJSON</button><button onClick={() => download(`${selected}-crossings.csv`, csv, "text/csv")}>Export crossings CSV</button></div>
       <div className="inventory-details"><span>Inspect intersected records</span>{Object.entries(inv).map(([component, layer]) => {
         const entries = (layer.features ?? []).slice(0, 6);
-        const classes = (layer.classes ?? []).filter((entry: AnyRecord) => entry.value > 0).slice(0, 6);
+        const classes = (layer.classes ?? []).filter((entry) => entry.value > 0).slice(0, 6);
         return <details key={component}><summary>{component.split("_").join(" ")} <b>{layer.intersected_feature_count ?? layer.native_vegetation_cell_count ?? 0}</b></summary><ul>
-          {entries.map((entry: AnyRecord) => <li key={`${component}-${entry.source_object_id}`}>{entry.properties?.roadnamebase ?? entry.properties?.hydroname ?? entry.properties?.NAME ?? entry.source_object_id}{entry.major_road ? " · major" : ""}</li>)}
-          {classes.map((entry: AnyRecord) => <li key={`${component}-${entry.value}`}>{entry.PCTName ?? `PCT ${entry.value}`} · {entry.route_cell_count} cells</li>)}
+          {entries.map((entry) => <li key={`${component}-${entry.source_object_id}`}>{featureName(entry.properties, entry.source_object_id)}{entry.major_road ? " · major" : ""}</li>)}
+          {classes.map((entry) => <li key={`${component}-${entry.value}`}>{entry.PCTName ?? `PCT ${entry.value}`} · {entry.route_cell_count} cells</li>)}
         </ul></details>;
       })}</div>
     </div>
@@ -186,14 +181,14 @@ function App() {
   const [selected, setSelected] = useState<Preset>("balanced");
   const [error, setError] = useState<string | null>(null);
   const [analysisOpen, setAnalysisOpen] = useState(false);
-  useEffect(() => { fetch("/data/routes.json").then((response) => { if (!response.ok) throw new Error(`Asset request failed (${response.status})`); return response.json(); }).then(setData).catch((reason: Error) => setError(reason.message)); }, []);
+  useEffect(() => { fetch("/data/routes.json").then((response) => { if (!response.ok) throw new Error(`Asset request failed (${response.status})`); return response.json() as Promise<unknown>; }).then((payload) => setData(parseRouteData(payload))).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Route data could not be loaded")); }, []);
   const route = useMemo(() => data?.routes.find((item) => item.preset === selected), [data, selected]);
   if (error) return <main className="state"><h1>Corridor assets unavailable</h1><p>{error}</p></main>;
   if (!data || !route) return <main className="state"><p>Loading validated S1 routes…</p></main>;
   const inv = route.impact_inventory;
   const inventoryCsvRows = Object.entries(inv).flatMap(([component, layer]) => [
-    ...(layer.features ?? []).map((feature: AnyRecord) => [selected, component, feature.source_object_id, feature.intersection_length_m ?? "", feature.major_road ?? "", feature.properties?.roadnamebase ?? feature.properties?.hydroname ?? feature.properties?.NAME ?? ""]),
-    ...(layer.classes ?? []).filter((entry: AnyRecord) => entry.value > 0).map((entry: AnyRecord) => [selected, component, entry.value, "", "", entry.PCTName ?? ""]),
+    ...(layer.features ?? []).map((feature) => [selected, component, feature.source_object_id, feature.intersection_length_m ?? "", feature.major_road ?? "", featureName(feature.properties, feature.source_object_id)]),
+    ...(layer.classes ?? []).filter((entry) => entry.value > 0).map((entry) => [selected, component, entry.value, "", "", entry.PCTName ?? ""]),
   ]);
   const csv = [["route_preset", "component", "source_object_id", "intersection_length_m", "major_road", "source_name"], ...inventoryCsvRows].map((row) => row.map(csvCell).join(",")).join("\n");
   return <main className="app-frame">

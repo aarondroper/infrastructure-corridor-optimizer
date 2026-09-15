@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from ico_model.config import load_config as load_model_config
 from ico_model.precomputed_routes import (
     RouteAssetError,
     generate_precomputed_routes,
@@ -11,9 +12,7 @@ from ico_model.precomputed_routes import (
 
 
 def load_config():
-    return json.loads(
-        (Path(__file__).parents[1] / "config" / "model.json").read_text(encoding="utf-8")
-    )
+    return load_model_config(Path(__file__).parents[1] / "config" / "model.json")
 
 
 def grid_bundle(config):

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Acquire configured ArcGIS constraint layers for the bounded S1 envelope."""
 
 from __future__ import annotations
@@ -14,6 +13,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from ico_model.config import load_config
 from ico_model.sources import (
     ArcGISClient,
     SourceAccessError,
@@ -26,13 +26,6 @@ from ico_model.sources import (
     validate_service_crs,
     write_manifest,
 )
-
-
-def load_config(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise SourceValidationError("model configuration must be a JSON object")
-    return payload
 
 
 def _layer_url(source_url: str, layer_id: int) -> str:

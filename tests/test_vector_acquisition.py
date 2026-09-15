@@ -3,15 +3,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from ico_model.config import load_config as load_model_config
 from scripts.acquire_vector_sources import acquire, stream_acquisition, write_acquisition
 from ico_model.sources import SourceAccessError, SourceValidationError, write_manifest
 from ico_model.vector_artifacts import validate_vector_manifest
 
 
 def load_config():
-    config = json.loads(
-        (Path(__file__).parents[1] / "config" / "model.json").read_text(encoding="utf-8")
-    )
+    config = load_model_config(Path(__file__).parents[1] / "config" / "model.json")
     # Keep existing in-memory tests focused on acquisition semantics; dedicated
     # tests below exercise the production tiling settings.
     config["arcgis_acquisition"]["tile_size_degrees"] = 10

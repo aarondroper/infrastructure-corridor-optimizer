@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Validate an external bounded ArcGIS vector acquisition manifest and artifacts."""
 
 from __future__ import annotations
@@ -6,17 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any
 
+from ico_model.config import load_config
 from ico_model.sources import SourceAccessError, SourceValidationError, write_manifest
 from ico_model.vector_artifacts import validate_vector_manifest
-
-
-def load_config(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise SourceValidationError("model configuration must be a JSON object")
-    return payload
 
 
 def main() -> int:

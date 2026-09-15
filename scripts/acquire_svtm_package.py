@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Acquire and structurally inspect the official Data.NSW/SEED SVTM ZIP package."""
 
 from __future__ import annotations
@@ -6,8 +5,8 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any
 
+from ico_model.config import load_config
 from ico_model.sources import write_manifest
 from ico_model.svtm_package import (
     SvtmPackageError,
@@ -17,13 +16,6 @@ from ico_model.svtm_package import (
     validate_svtm_content_report,
     validate_persistent_path,
 )
-
-
-def load_config(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise SvtmPackageError("model configuration must be an object")
-    return payload
 
 
 def main() -> int:

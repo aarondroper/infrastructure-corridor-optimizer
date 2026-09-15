@@ -1,12 +1,11 @@
-#!/usr/bin/env python3
 """Acquire and validate the configured S1 endpoint source records."""
 
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
+from ico_model.config import ConfigError, load_config
 from ico_model.sources import (
     ArcGISClient,
     SourceAccessError,
@@ -16,10 +15,6 @@ from ico_model.sources import (
     validate_service_crs,
     write_manifest,
 )
-
-
-def load_config(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def main() -> int:
@@ -64,5 +59,5 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except (SourceAccessError, SourceValidationError) as exc:
+    except (ConfigError, SourceAccessError, SourceValidationError) as exc:
         raise SystemExit(f"Source acquisition failed: {exc}") from exc

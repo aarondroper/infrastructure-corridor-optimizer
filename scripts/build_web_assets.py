@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Build compact static application assets from validated route assessments."""
 
 from __future__ import annotations
@@ -8,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from ico_model.config import load_config
 
 def _load(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
@@ -36,7 +36,7 @@ def _strip_private_paths(value: Any) -> Any:
 def build_web_assets(assessments_path: str | Path, routes_dir: str | Path, config_path: str | Path) -> dict[str, Any]:
     assessments_file = Path(assessments_path).resolve()
     routes_root = Path(routes_dir).resolve()
-    config = _load(Path(config_path).resolve())
+    config = load_config(Path(config_path).resolve())
     assessments = _load(assessments_file)
     routes: list[dict[str, Any]] = []
     for assessment in assessments.get("assessments", []):

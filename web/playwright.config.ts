@@ -5,6 +5,7 @@ const publicBaseUrl = process.env.ICO_BASE_URL?.replace(/\/$/, "");
 
 export default defineConfig({
   testDir: "./tests",
+  testMatch: "**/*.spec.ts",
   outputDir: "./artifacts/browser-test-results",
   fullyParallel: false,
   forbidOnly: true,

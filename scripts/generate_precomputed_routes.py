@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Generate static route assets from a validated normalized-grid bundle."""
 
 from __future__ import annotations
@@ -6,13 +5,13 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from ico_model.config import load_config
 from ico_model.precomputed_routes import (
     RouteAssetError,
     generate_precomputed_routes,
     load_grid_bundle,
     write_precomputed_routes,
 )
-from scripts.acquire_vector_sources import load_config
 
 
 def main() -> int:

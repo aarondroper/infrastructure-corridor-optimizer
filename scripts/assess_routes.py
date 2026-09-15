@@ -1,12 +1,11 @@
-#!/usr/bin/env python3
 """Georeference and independently assess generated S1 route assets."""
 
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
+from ico_model.config import load_config
 from ico_model.route_assessment import RouteAssessmentError, assess_route_directory, write_route_assessments
 
 
@@ -24,7 +23,7 @@ def main() -> int:
     parser.add_argument("--svtm-raster", type=Path)
     parser.add_argument("--svtm-archive", type=Path)
     args = parser.parse_args()
-    config = json.loads(args.config.read_text(encoding="utf-8")) if args.config else None
+    config = load_config(args.config) if args.config else None
     vector_layers = {
         key: value for key, value in {
             "protected_land": args.protected_land,

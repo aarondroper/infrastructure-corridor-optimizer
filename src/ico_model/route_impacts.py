@@ -32,7 +32,7 @@ def _sha256(path: Path) -> str:
 
 
 def _arcgis_shape(geometry: Mapping[str, Any], geometry_type: str) -> Any:
-    from shapely.geometry import LineString, MultiLineString, Polygon, shape
+    from shapely.geometry import LineString, MultiLineString, shape
     from shapely.validation import make_valid
 
     try:

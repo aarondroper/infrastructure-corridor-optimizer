@@ -1,13 +1,12 @@
-#!/usr/bin/env python3
 """Probe configured ArcGIS source topology and coverage metadata."""
 
 from __future__ import annotations
 
 import argparse
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from ico_model.config import ConfigError, load_config
 from ico_model.sources import (
     ArcGISClient,
     SourceAccessError,
@@ -18,10 +17,6 @@ from ico_model.sources import (
     validate_required_layer_type,
     write_manifest,
 )
-
-
-def load_config(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def probe(config: dict, client: ArcGISClient) -> dict:
@@ -82,5 +77,5 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except (SourceAccessError, SourceValidationError) as exc:
+    except (ConfigError, SourceAccessError, SourceValidationError) as exc:
         raise SystemExit(f"Source probe failed: {exc}") from exc

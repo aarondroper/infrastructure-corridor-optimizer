@@ -1,14 +1,16 @@
-import json
 import unittest
 from pathlib import Path
 
+from ico_model.config import load_config
 from ico_model.cost import validate_weights
+
+
+CONFIG_PATH = Path(__file__).parents[1] / "config" / "model.json"
 
 
 class ModelConfigTests(unittest.TestCase):
     def test_approved_configuration_has_unique_endpoint_records(self):
-        config_path = Path(__file__).parents[1] / "config" / "model.json"
-        config = json.loads(config_path.read_text())
+        config = load_config(CONFIG_PATH)
         origin = config["endpoints"]["origin"]
         destination = config["endpoints"]["destination"]
         self.assertNotEqual(origin["source_global_id"], destination["source_global_id"])
@@ -18,24 +20,21 @@ class ModelConfigTests(unittest.TestCase):
         self.assertEqual(config["analysis_crs_epsg"], 7856)
 
     def test_sensitivity_presets_cover_all_components_and_sum_to_one(self):
-        config_path = Path(__file__).parents[1] / "config" / "model.json"
-        config = json.loads(config_path.read_text())
+        config = load_config(CONFIG_PATH)
         component_ids = [component["id"] for component in config["components"]]
         for preset in config["sensitivity_presets"].values():
             validate_weights(preset["weights"], component_ids)
             self.assertAlmostEqual(sum(preset["weights"].values()), 1.0)
 
     def test_component_sources_are_declared(self):
-        config_path = Path(__file__).parents[1] / "config" / "model.json"
-        config = json.loads(config_path.read_text())
+        config = load_config(CONFIG_PATH)
         source_ids = {source["id"] for source in config["sources"]}
         for component in config["components"]:
             if "source_id" in component:
                 self.assertIn(component["source_id"], source_ids)
 
     def test_native_vegetation_source_declares_queryable_layer(self):
-        config_path = Path(__file__).parents[1] / "config" / "model.json"
-        config = json.loads(config_path.read_text())
+        config = load_config(CONFIG_PATH)
         source = next(source for source in config["sources"] if source["id"] == "nsw-svtm")
         self.assertEqual(source["service_crs_epsg"], 3308)
         self.assertEqual(source["acquisition_layers"][0]["component"], "native_vegetation")
@@ -44,8 +43,7 @@ class ModelConfigTests(unittest.TestCase):
         self.assertIn("PCTID", source["acquisition_layers"][0]["out_fields"])
 
     def test_native_vegetation_source_declares_matching_bulk_package(self):
-        config_path = Path(__file__).parents[1] / "config" / "model.json"
-        config = json.loads(config_path.read_text())
+        config = load_config(CONFIG_PATH)
         source = next(source for source in config["sources"] if source["id"] == "nsw-svtm")
         package = source["bulk_package"]
         self.assertEqual(package["release"], "C2.0.M2.2")
@@ -54,8 +52,7 @@ class ModelConfigTests(unittest.TestCase):
         self.assertEqual(package["required_fields"][-1], "vegForm")
 
     def test_terrain_policy_has_ordered_sources_and_explicit_crs(self):
-        config_path = Path(__file__).parents[1] / "config" / "model.json"
-        config = json.loads(config_path.read_text())
+        config = load_config(CONFIG_PATH)
         policy = config["terrain_source_policy"]
         source_ids = {source["id"] for source in config["sources"]}
         self.assertEqual(policy["primary_source_id"], "elvis-nsw-dem")

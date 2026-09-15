@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """List or remove abandoned acquisition cache namespaces and staging directories."""
 
 from __future__ import annotations

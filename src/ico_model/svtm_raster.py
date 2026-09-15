@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from .svtm_package import SvtmPackageError, inspect_svtm_zip, validate_svtm_content_report
+from .svtm_package import SvtmPackageError, validate_svtm_content_report
 
 
 class SvtmRasterError(RuntimeError):

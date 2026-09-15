@@ -7,6 +7,7 @@ from urllib.error import HTTPError
 from urllib.error import URLError
 from urllib.parse import parse_qs, urlparse
 
+from ico_model.config import load_config as load_model_config
 from ico_model.sources import (
     ArcGISClient,
     SourceAccessError,
@@ -26,9 +27,7 @@ from ico_model.sources import (
 
 
 def load_config():
-    return json.loads(
-        (Path(__file__).parents[1] / "config" / "model.json").read_text(encoding="utf-8")
-    )
+    return load_model_config(Path(__file__).parents[1] / "config" / "model.json")
 
 
 def endpoint_features(config):

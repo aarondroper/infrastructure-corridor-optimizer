@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Acquire the configured public Copernicus GLO-30 fallback tiles for S1."""
 
 from __future__ import annotations
@@ -8,14 +7,8 @@ import json
 import tempfile
 from pathlib import Path
 
+from ico_model.config import load_config
 from ico_model.dem_acquisition import DemAcquisitionError, acquire_copernicus_tiles
-
-
-def load_config(path: Path) -> dict:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise DemAcquisitionError("model configuration must be a JSON object")
-    return payload
 
 
 def main() -> int:

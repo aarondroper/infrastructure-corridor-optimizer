@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Validate the official SVTM classified raster and materialize only S1."""
 
 from __future__ import annotations
@@ -8,6 +7,7 @@ import json
 import os
 from pathlib import Path
 
+from ico_model.config import load_config
 from ico_model.svtm_package import inspect_svtm_zip
 from ico_model.svtm_raster import SvtmRasterError, validate_and_materialize_s1_raster, write_json
 
@@ -19,7 +19,7 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path, default=Path("data/external/vectors/svtm-package"))
     parser.add_argument("--cell-size-m", type=float, default=100.0)
     args = parser.parse_args()
-    config = json.loads(args.config.read_text(encoding="utf-8"))
+    config = load_config(args.config)
     source = next(item for item in config["sources"] if item["id"] == "nsw-svtm")
     package = source["bulk_package"]
     output_dir = args.output_dir.resolve()

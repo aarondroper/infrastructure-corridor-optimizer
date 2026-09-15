@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Derive the guarded S1 geographic normalized-grid bundle."""
 
 from __future__ import annotations
@@ -6,8 +5,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from ico_model.config import load_config
 from ico_model.geographic_grid import GeographicGridError, derive_s1_grid, write_grid_bundle
-from scripts.acquire_vector_sources import load_config
 
 
 def main() -> int:
