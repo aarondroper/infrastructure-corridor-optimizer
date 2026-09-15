@@ -73,7 +73,9 @@ shell presents strategy, map, and assessment regions side by side on desktop, th
 uses map-first stacked tablet and strategy-first mobile layouts. All three existing
 route centerlines are visible in the map overlay with a compact identity legend; the
 selected route is emphasized while the same identity is repeated in the strategy rail,
-assessment heading, and comparison dock.
+assessment heading, and comparison dock. The compact header's `About the analysis`
+dialog summarizes purpose, presets, analytical basis, sources, interpretation limits,
+basemap, and existing exports; the former footer disclaimer is represented there.
 
 ## Current limitations
 

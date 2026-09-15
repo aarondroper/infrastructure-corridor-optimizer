@@ -146,6 +146,34 @@ function AssessmentPanel({ route, selected, csv }: { route: AppData["routes"][nu
   </aside>;
 }
 
+function AnalysisDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const closeButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    closeButton.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      if (previousFocus && previousFocus !== document.body) previousFocus.focus();
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return <div id="analysis-information" className="analysis-popover" role="dialog" aria-modal="false" aria-labelledby="analysis-information-heading" tabIndex={-1}>
+    <div className="analysis-popover-heading"><div><p className="panel-kicker">Method and data note</p><h2 id="analysis-information-heading">About the analysis</h2></div><button ref={closeButton} className="analysis-close" type="button" onClick={onClose} aria-label="Close analysis information">Close</button></div>
+    <section><h3>Purpose</h3><p>This tool supports preliminary infrastructure corridor screening between fixed Bayswater and Eraring-area endpoints in NSW. It compares three precomputed least-cost route strategies so their trade-offs can be reviewed together.</p></section>
+    <section><h3>Routing strategies</h3><dl className="analysis-strategies"><div><dt>Shortest</dt><dd>Strong preference for route length.</dd></div><div><dt>Balanced</dt><dd>Balances length, terrain, impacts, and crossings.</dd></div><div><dt>Environmental</dt><dd>Prioritizes lower environmental sensitivity.</dd></div></dl></section>
+    <section><h3>Analytical basis</h3><p>Routes are calculated on a 100 m EPSG:7856 analysis grid using weighted least-cost routing. The approved components are route length, terrain/slope, protected land, native vegetation, hydrography, roads, and railways. The presets are sensitivity assumptions, not objective or engineering truths.</p></section>
+    <section><h3>Data and provenance</h3><p>The source stack includes Geoscience Australia electricity-infrastructure endpoint records, NSW National Parks and Wildlife Service Estate, the official NSW State Vegetation Type Map Extant C2.0.M2.2 classified raster, NSW Hydrography, the NSW Transport Theme road and railway layers, and the approved Copernicus DEM GLO-30 fallback.</p></section>
+    <section><h3>Interpretation and map data</h3><p>These are preliminary screening outputs derived from a 100 m grid. They do not replace engineering design, detailed environmental assessment, land-access review, permitting or regulatory review, or field investigation.</p><p>The basemap uses OpenStreetMap contributors. Approved environmental and crossing layers are summarized in the route assessment, and the existing controls provide route GeoJSON and crossings CSV exports.</p></section>
+  </div>;
+}
+
 function ComparisonStrip({ data, selected, onSelect }: { data: AppData; selected: Preset; onSelect: (preset: Preset) => void }) {
   return <section className="comparison-strip" aria-labelledby="comparison-heading">
     <div className="comparison-title"><h2 id="comparison-heading">Route comparison</h2><p>Evidence at a glance</p></div>
@@ -157,6 +185,7 @@ function App() {
   const [data, setData] = useState<AppData | null>(null);
   const [selected, setSelected] = useState<Preset>("balanced");
   const [error, setError] = useState<string | null>(null);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
   useEffect(() => { fetch("/data/routes.json").then((response) => { if (!response.ok) throw new Error(`Asset request failed (${response.status})`); return response.json(); }).then(setData).catch((reason: Error) => setError(reason.message)); }, []);
   const route = useMemo(() => data?.routes.find((item) => item.preset === selected), [data, selected]);
   if (error) return <main className="state"><h1>Corridor assets unavailable</h1><p>{error}</p></main>;
@@ -170,7 +199,7 @@ function App() {
   return <main className="app-frame">
     <header className="app-header">
       <div className="brand-lockup"><img className="app-logo" src="/branding/app-logo.svg" alt="" /><div className="brand"><h1>Infrastructure Corridor Optimizer</h1><p>Preliminary corridor screening · Hunter / New England, NSW · Scenario {data.scenario}</p></div></div>
-      <div className="status" role="status" aria-label="Route asset status"><span className="status-label">Offline route assets</span><span className="status-value">Validated · source-backed</span></div>
+      <div className="header-actions"><button className="about-trigger" type="button" aria-haspopup="dialog" aria-expanded={analysisOpen} aria-controls="analysis-information" onClick={() => setAnalysisOpen((open) => !open)}>About the analysis</button><AnalysisDialog open={analysisOpen} onClose={() => setAnalysisOpen(false)} /></div>
     </header>
     <section className="app-shell" aria-label="Corridor route workspace">
       <StrategyPanel data={data} selected={selected} onSelect={setSelected} />
@@ -178,7 +207,6 @@ function App() {
       <AssessmentPanel route={route} selected={selected} csv={csv} />
     </section>
     <ComparisonStrip data={data} selected={selected} onSelect={setSelected} />
-    <footer><p>{data.disclaimer}</p><p>Base map © OpenStreetMap contributors · approved environmental and crossing layers are summarized in the route assessment.</p></footer>
   </main>;
 }
 

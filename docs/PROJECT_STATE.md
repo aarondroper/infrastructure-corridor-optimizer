@@ -53,6 +53,9 @@ are:
   system, and bounded production-preview/browser verification;
 - `web/public/branding/app-logo.svg`: replaceable decorative application-mark asset
   referenced directly by the compact frontend header;
+- the compact header's `About the analysis` dialog: evidence-based purpose, preset,
+  analytical-basis, source, limitation, basemap, and export context; the former
+  duplicate footer text is removed;
 
 There is still no verified evidence of:
 
