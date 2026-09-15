@@ -33,7 +33,7 @@ button:focus, button:focus-visible { outline: 2px solid var(--orange); outline-o
 .app-frame { width: 100%; min-height: 100vh; padding: 0 16px 16px; }
 .app-header { position: relative; z-index: 5; display: flex; min-height: 64px; align-items: center; justify-content: space-between; gap: var(--space-5); border-bottom: 1px solid var(--line); }
 .brand-lockup { display: flex; flex: 1 1 auto; min-width: 0; align-items: center; gap: 10px; }
-.app-logo { display: block; flex: 0 0 32px; width: 32px; height: 32px; object-fit: contain; }
+.app-logo { display: block; flex: 0 0 40px; width: 40px; height: 40px; object-fit: contain; }
 .brand { min-width: 0; }
 .brand h1 { margin: 0; color: var(--teal); font-size: 1.35rem; font-weight: 600; letter-spacing: -.015em; line-height: 1.1; }
 .brand p { margin: 3px 0 0; color: var(--teal-muted); font-size: .82rem; line-height: 1.2; }
