@@ -9,3 +9,6 @@ data/external/
 data/cache/
 data/source_manifest.json
 data/source_probe.json
+web/node_modules/
+web/dist/
+web/tsconfig.tsbuildinfo

@@ -201,13 +201,29 @@ PYTHONPATH=src python3 scripts/generate_precomputed_routes.py \
 PYTHONPATH=src:. python3 scripts/assess_routes.py \
   --grid-bundle data/external/grids/s1-100m/normalized_grid_bundle.json \
   --routes-dir data/external/routes/s1-100m \
+  --config config/model.json \
+  --protected-land data/external/vectors/s1-npws-estate/nsw-npws-estate--protected_land.json \
+  --hydrography-line data/external/vectors/s1-hydrography-line-final/nsw-hydrography--hydrography_line.json \
+  --hydrography-area data/external/vectors/s1-hydrography-area/nsw-hydrography--hydrography_area.json \
+  --roads data/external/vectors/s1-roads/nsw-transport--roads.json \
+  --railways data/external/vectors/s1-railways/nsw-transport--railways.json \
+  --svtm-raster data/external/vectors/svtm-package/s1-svtm-100m.tif \
+  --svtm-archive data/cache/seed/svtm-c2.0.m2.2/svtm_nsw_extant_pct_vc2_0_m2_2_108.zip \
   --output data/external/routes/s1-100m/route_assessments.json
+PYTHONPATH=src python3 scripts/build_web_assets.py \
+  --assessments data/external/routes/s1-100m/route_assessments.json \
+  --routes-dir data/external/routes/s1-100m \
+  --config config/model.json \
+  --output web/public/data/routes.json
 ```
 
-The current measured outputs are a 990x767 grid (32.3 MB), 8,329 unavailable
-cells, and three routes of 95.76 km, 96.28 km, and 99.17 km for shortest,
-balanced, and environmental respectively. These are preliminary screening
-assets; feature-level crossing inventories and the frontend remain future work.
+The current measured outputs are a 990x767 grid (approximately 60 MB because the
+raw slope diagnostic is retained), 8,329 unavailable cells, and three routes of
+95.76 km, 96.28 km, and 99.17 km for shortest, balanced, and environmental
+respectively. The assessment command adds feature-level inventories for the five
+vector layers, SVTM class inventories, physical slope metrics, endpoint/grid-quality
+checks, and a comparison summary. Raw source geometries remain outside the compact
+application asset.
 
 The command refuses to overwrite an existing output. Keep the archive and derived
 artifact outside Git; use the cleanup procedure below only for abandoned cache or

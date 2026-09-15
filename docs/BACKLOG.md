@@ -79,11 +79,10 @@ Turn the approved study scenario and sources into a transparent, testable routin
 
 ## Priority 3 — Reproducible Data and Routing Pipeline
 
-**Status:** Active. The complete approved S1 source stack, a real 100 m geographic
-grid, three offline A* routes, and preliminary GeoJSON/assessment assets are now
-verified in persistent ignored storage. Remaining Priority 3 work is feature-level
-crossing/route assessment refinement and compact application-asset packaging; the
-static frontend remains Priority 5.
+**Status:** Complete for the approved S1 MVP slice. The complete approved S1 source
+stack, real 100 m geographic grid, three offline A* routes, and validated assessment
+inputs are verified in persistent ignored storage. Further work is calibration or
+future source/model extension, not an unvalidated missing pipeline stage.
 
 ### Objective
 
@@ -91,8 +90,8 @@ Implement the full offline Python workflow from source acquisition through route
 
 ### Major Deliverables
 
-- reproducible acquisition of approved datasets (Hydroline, Copernicus DEM, and
-  S1-windowed SVTM raster complete; remaining vector layers still required);
+- reproducible acquisition of approved datasets (Hydroline, Copernicus DEM,
+  S1-windowed SVTM raster, NPWS, roads, and railways complete for S1);
 - bounded persistent-storage acquisition with response/page/feature/storage limits,
   resumable page caches, and abandoned-cache cleanup;
 - terrain-source selection using ELVIS/NSW as primary and Copernicus GLO-30 as the
@@ -107,8 +106,7 @@ Implement the full offline Python workflow from source acquisition through route
 - automated tests for core analytical logic.
 
 The first geographic execution slice satisfies the source/grid/route deliverables
-with the provisional 100 m model. It does not yet satisfy feature-level crossing
-inventories or the application-ready asset contract.
+with the provisional 100 m model and includes feature-level assessment inputs.
 
 ### Important Dependencies
 
@@ -126,6 +124,10 @@ inventories or the application-ready asset contract.
 - large raw source data is not committed without explicit justification.
 
 ## Priority 4 — Route Assessment and Application Assets
+
+**Status:** Complete for the S1 static MVP slice. Feature-level inventories,
+physical metrics, plausibility diagnostics, comparison data, provenance, and compact
+web assets are generated and tested from validated outputs.
 
 ### Objective
 
@@ -156,6 +158,10 @@ Produce professional route-impact metrics, crossing inventories, and compact web
 - outputs contain sufficient provenance to trace configuration and source versions.
 
 ## Priority 5 — Interactive Web Application
+
+**Status:** Active, first static comparison slice implemented. The initial React/
+TypeScript + MapLibre app builds and compares precomputed routes; deployment,
+browser-level visual/accessibility verification, and further inspection polish remain.
 
 ### Objective
 

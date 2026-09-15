@@ -105,11 +105,11 @@ owner-reviewed scope change.
 
 ## Independent route assessment
 
-The composite cost is not the only output. Each route should later report physical or
+The composite cost is not the only output. Each route now reports physical or
 countable measures supported by the selected sources: length, terrain statistics,
-protected-land overlap, native-vegetation overlap, watercourse crossings, road
-crossings by class, and railway crossings. These metrics explain trade-offs and must
-not be inferred solely from the composite score.
+protected-land overlap, native-vegetation class/cell inventory, watercourse
+intersections, road intersections by source hierarchy, and railway crossings. These
+metrics explain trade-offs and are calculated independently of the composite score.
 
 ## Geographic grid implementation
 
@@ -129,6 +129,11 @@ they do not assert legal clearing status.
 The routing core remains dependency-light and validates normalized rectangular grids;
 optional Rasterio/Fiona/Shapely tooling is isolated to preprocessing and assessment.
 `ico_model.precomputed_routes` applies the approved presets to the geographic bundle
-and writes route-cell assets. The current S1 build also publishes EPSG:7844 GeoJSON
-and preliminary assessments, while application assets and feature-level crossing
-inventories remain future work.
+and writes route-cell assets. The current S1 build also publishes EPSG:7844 GeoJSON,
+physical route metrics, feature-level vector inventories, SVTM raster class
+inventories, and route plausibility diagnostics. `scripts/build_web_assets.py`
+packages these results for the static application. Feature intersections use a
+centerline through 100 m cell centres; they are not surveyed corridor footprints.
+Hydroline, road, and railway counts are intersected source features, so segmented
+source data can produce more records than a human would regard as distinct named
+crossings.

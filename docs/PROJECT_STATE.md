@@ -26,7 +26,8 @@ are:
 - `src/ico_model/svtm_package.py`: guarded resumable acquisition, ZIP safety inspection, selected-member extraction, and analytical content-report validation for the official SVTM bulk delivery;
 - `src/ico_model/svtm_raster.py`: direct `/vsizip` inspection of the official classified SVTM raster, VAT/metadata validation, and bounded S1 window materialization;
 - `src/ico_model/geographic_grid.py`: validated-source reprojection, vector rasterization, terrain slope derivation, and seven-component S1 grid construction;
-- `src/ico_model/route_assessment.py`: route georeferencing and independent preliminary geographic metrics;
+- `src/ico_model/route_impacts.py`: spatial-indexed feature-level vector inventories and SVTM raster-class inventories for route impacts;
+- `src/ico_model/route_assessment.py`: route georeferencing, independent physical metrics, feature inventories, endpoint/grid-quality diagnostics, and preset comparison;
 - `scripts/acquire_sources.py`: live endpoint acquisition and provenance manifest CLI;
 - `scripts/probe_sources.py`: ArcGIS source topology/CRS/extent probe;
 - `scripts/select_terrain_source.py`: DEM sidecar selection and provenance-report CLI;
@@ -38,19 +39,19 @@ are:
 - `scripts/validate_svtm_raster.py`: bounded validation and provenance publication for the owner-supplied SVTM raster package;
 - `scripts/derive_geographic_grid.py`: geographic S1 normalized-grid build CLI;
 - `scripts/assess_routes.py`: route GeoJSON and preliminary assessment CLI;
+- `scripts/build_web_assets.py`: compact static application-asset builder;
 - `scripts/cleanup_acquisition_storage.py`: dry-run-first cleanup for abandoned acquisition directories;
 - `config/model.json`: S1 endpoints, seven sensitivity components, normalization, and approved sensitivity presets;
 - `pyproject.toml`: minimal Python package metadata with an optional `geospatial` extra for raster/vector processing;
-- `tests/`: eighty-two unit tests covering cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, DEM acquisition/validation, terrain selection, geographic outputs, precomputed route assets, SVTM package safeguards, and acquisition cleanup;
+- `tests/`: automated coverage includes cost, configuration, routing, source acquisition, vector acquisition, artifact validation, vector schema normalization, DEM acquisition/validation, terrain selection, geographic outputs, route-impact logic, compact web assets, precomputed route assets, SVTM package safeguards, and acquisition cleanup;
 - `benchmarks/benchmark_routing.py` and `benchmarks/results.json`: reproducible proxy benchmark;
 - `docs/ANALYTICAL_MODEL.md`: model semantics, evidence, and current execution boundary.
 
 There is still no verified evidence of:
 
-- React/TypeScript frontend code or MapLibre integration;
-- complete acquisition coverage for the full constraint-source stack;
-- generated geographic cost surfaces, routes, or assessment assets;
-- CI, deployment configuration, or a live application.
+- deployment configuration or a live public application;
+- CI, linting configuration, or browser-level visual verification;
+- a DXF export or arbitrary client-side routing.
 
 The feasibility record remains source evidence and scenario context. Source acquisition
 is implemented for fixed endpoints and bounded ArcGIS vector layers, with staged
@@ -104,8 +105,9 @@ The governance baseline, study/data feasibility record, analytical model definit
 dependency-light cost/routing core, approved sensitivity configuration, endpoint and
 vector acquisition boundary, optional GIS preprocessing stage, unit tests, and
 deterministic routing benchmark are present. Geographic grid derivation, real S1
-offline routes, and preliminary route assessments are now implemented; frontend and
-deployment work remain future work.
+offline routes, feature-level route assessments, compact web assets, and the first
+static frontend are implemented; deployment and final export polish remain future
+work.
 
 ## Verified
 
@@ -132,11 +134,13 @@ These are preserved in `docs/DECISIONS.md` and do not establish that correspondi
 
 ## Partially Implemented
 
-Priority 2 is complete. Priority 3 is active and its first geographic execution slice
-is verified: all required S1 source artifacts, the 100 m geographic grid, three real
-offline routes, and preliminary georeferenced assessments are present in ignored
-persistent storage. Application assets, feature-level crossing inventories, and
-production-quality validation remain.
+Priority 2 and the core Priority 3/4 analytical deliverables are complete for the
+current S1 slice. The complete approved source stack, 100 m geographic grid, three
+real offline routes, feature-level vector/raster impact inventories, physical route
+metrics, plausibility diagnostics, and a 327,723-byte compact web asset are present in
+ignored persistent storage or generated application source. The first static
+React/TypeScript + MapLibre MVP is implemented and builds locally; deployment,
+browser visual verification, and final export/deployment polish remain.
 
 ## Open Inputs / Limitations
 
@@ -146,7 +150,6 @@ and representative live endpoints. The following inputs remain unresolved:
 - exact vector-form SVTM reconciliation remains a fallback/validation question; the
   approved classified raster representation is accepted for the model and its known
   REST vector count of 216,808 is not applied as a raster feature count;
-- feature-level crossing inventories and class-specific route assessment;
 - calibration of provisional normalization and penalty mappings;
 - inclusion or exclusion of a flood constraint;
 - inclusion of DXF export.
@@ -161,8 +164,8 @@ No hosting provider is selected as a confirmed implementation decision.
 
 Verified on 14 September 2026:
 
-- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 82 tests passed, with one geospatial test skipped because optional GIS dependencies are not installed in the base interpreter;
-- `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python -m unittest discover -s tests -v` — 82 tests passed with the geospatial test enabled;
+- `PYTHONPATH=src python3 -m unittest discover -s tests -v` — 85 tests passed, with three geospatial tests skipped because optional GIS dependencies are not installed in the base interpreter;
+- `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python -m unittest discover -s tests -v` — 85 tests passed with GIS-backed route-impact tests enabled;
 - `PYTHONPATH=src python3 benchmarks/benchmark_routing.py --sizes 128 256 512` — completed and retained in `benchmarks/results.json`;
 - `PYTHONPATH=src python3 scripts/acquire_sources.py --output <temporary manifest> --timeout 20` — live GA endpoint acquisition succeeded; the manifest was written outside the repository;
 - `PYTHONPATH=src python3 scripts/probe_sources.py --output <temporary report> --timeout 20` — live probe validated GA, NPWS, SVTM, hydrography, and transport, and reported the configured terrain services as deferred/no-raster;
@@ -181,7 +184,10 @@ Verified on 14 September 2026:
 - ArcGIS NPWS empty tiles returned `objectIds: null`; this valid empty-result behavior is now handled and regression-tested rather than treated as a malformed response;
 - `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python scripts/derive_geographic_grid.py ...` — published a real S1 100 m EPSG:7856 bundle of 990x767 cells, 8,329 unavailable DEM/SVTM nodata cells, transformed endpoint cells `[149, 125]` and `[880, 672]`, and all seven components. Shapely repaired 15 invalid NPWS polygon geometries; the other four vector inputs required no repair.
 - `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python scripts/generate_precomputed_routes.py ...` — generated shortest (732 cells, 832.807 cost), balanced (741 cells, 494.735 cost), and environmental (786 cells, 311.769 cost) routes with A*;
-- `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python scripts/assess_routes.py ...` — published EPSG:7844 GeoJSON and preliminary independent lengths of 95.76 km, 96.28 km, and 99.17 km respectively;
+- `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python scripts/assess_routes.py ...` with all five vector artifacts and the SVTM raster/archive — published feature-level inventories, EPSG:7844 GeoJSON, physical slope metrics, route-quality diagnostics, and independent lengths of 95.76 km, 96.28 km, and 99.17 km respectively. All routes used available cells, matched endpoint cells, avoided grid boundaries, and had simple centerlines;
+- `PYTHONPATH=src python3 scripts/build_web_assets.py ...` — published a 327,723-byte static asset containing the three route geometries, metrics, compact impact inventories, endpoint features, comparison data, and screening disclaimer with raw source paths removed;
+- `npm install` in `web/` — installed the declared React/TypeScript/MapLibre dependencies; npm reported one critical advisory that remains to be reviewed before deployment;
+- `npm run build` in `web/` — TypeScript and Vite production build succeeded; MapLibre bundle-size warning remains expected for the initial MVP;
 - bounded count-only probes returned 216,808 SVTM and 68,320 Hydroline features; 20-feature geometry samples measured approximately 8.1 KB and 0.77 KB per serialized feature respectively. No full SVTM vector artifact was published; the official classified raster representation is validated and accepted.
 - Hydroline validation independently confirmed 68,320 unique features, 355 pages, 16 tiles, and 965 tiled-inventory overlaps reconciled. The persistent final bundle is 105,232,759 bytes and its cache namespace is 108,584,694 bytes.
 - Full SVTM REST acquisition first exceeded the unchanged 32 MB response ceiling at 1,000 features/page. The page size was reduced to 250 based on observed response size; the run reached 190 validated pages, 1,159,268,449 bytes of page cache, and a 333,452,505-byte peak staged artifact before repeated ArcGIS failures. The page-250 cache remains fallback/validation evidence, not the primary source.
@@ -191,9 +197,9 @@ Verified on 14 September 2026:
 - `PYTHONPATH=src python3 scripts/acquire_copernicus_dem.py --output-dir data/external/dem/copernicus-glo30-s1 --timeout 120 --max-retries 3 --backoff 1` — restored four public GLO-30 tiles covering S1; the persistent artifact is 160,523,100 bytes and passed the terrain artifact validator.
 - `PYTHONPATH=src python3 scripts/acquire_svtm_package.py --cache-dir data/cache/seed/svtm-c2.0.m2.2 --output-dir data/external/vectors/svtm-package --timeout 15 --max-retries 0` — bounded package probe wrote only a 423-byte persistent state record and failed safely on the official endpoint's HTTP 202 web challenge; no archive bytes were materialized.
 
-No linting, type-check, frontend build, full geographic data-validation, or deployment
-verification exists yet. Git status and diff checks are available and are run before
-commits.
+No dedicated linting/type-check command beyond the successful TypeScript compiler,
+no browser visual verification, and no deployment verification exists yet. Git status
+and diff checks are available and are run before commits.
 
 ## Owner Decision Status
 
@@ -210,10 +216,9 @@ and the decision log; the selector does not silently substitute an unconfigured 
 
 ## Current Development Frontier
 
-Priority 3 is active. The complete approved S1 source stack is now captured and
-validated in persistent ignored storage, including the official SVTM package raster
-representation and Copernicus fallback DEM. The 100 m geographic grid, three A*
-route assets, EPSG:7844 GeoJSON, and preliminary assessments are verified outputs.
-The next frontier is feature-level route assessment refinement, compact application
-asset packaging, and the static React/MapLibre MVP; no engineering or regulatory
-approval is implied.
+The first analytical and static-MVP execution slice is complete: the approved S1
+source stack, geographic grid, A* routes, feature-level assessments, compact assets,
+and local frontend build are verified. The next frontier is professional export
+polish, accessibility/browser verification, deployment selection and verification,
+and any owner-reviewed calibration of provisional model transformations. No
+engineering or regulatory approval is implied.

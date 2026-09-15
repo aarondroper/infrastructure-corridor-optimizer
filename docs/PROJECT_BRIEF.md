@@ -11,11 +11,11 @@ Upper Hunter to Lake Macquarie / Eraring-area screening context using the public
 Bayswater and Eraring records as fixed endpoints. The exact processing envelope and
 source coverage still require implementation validation.
 
-**Current phase:** Reproducible data and routing pipeline. The repository has a tested
-dependency-light cost/routing core, approved sensitivity configuration, and a live-
-checkable endpoint acquisition boundary; geographic grid derivation and the
-application are not implemented. See `docs/PROJECT_STATE.md` for the evidence-backed
-snapshot.
+**Current phase:** First geographic and static-MVP execution slice. The repository has
+a tested dependency-light cost/routing core, approved sensitivity configuration,
+validated S1 source artifacts, a real 100 m geographic grid, offline routes,
+feature-level assessments, compact application assets, and a local React/TypeScript
++ MapLibre build. See `docs/PROJECT_STATE.md` for the evidence-backed snapshot.
 
 ## Purpose
 

@@ -288,6 +288,9 @@ def derive_s1_grid(
         "component_grids": {
             name: values.tolist() for name, values in components.items()
         },
+        "diagnostic_grids": {
+            "slope_degrees": slope.tolist(),
+        },
         "diagnostics": {
             "dem_valid_cell_count": int(valid_elevation.sum()),
             "svtm_valid_cell_count": int(valid_svtm.sum()),

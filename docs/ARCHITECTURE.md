@@ -30,8 +30,9 @@ configuration, unit tests, ArcGIS/vector acquisition, a guarded SVTM package rea
 a GIS-backed geographic-grid stage, and a deterministic benchmark. The implemented
 pipeline validates source manifests, derives a 100 m EPSG:7856 S1 grid, runs
 deterministic eight-neighbor A*/Dijkstra routing, and publishes georeferenced route
-and assessment assets. There are still no frontend files or build/deployment
-configuration.
+and feature-level impact-assessment assets. The `web/` directory now contains the
+first static React/TypeScript + MapLibre application and Vite production build
+configuration; deployment is not yet verified.
 
 The sections below distinguish implemented analytical behavior from intended pipeline
 and application components. They become verified only when implemented files and
@@ -124,7 +125,10 @@ provenance-rich route-cell assets. `ico_model.geographic_grid` and
 reproject DEM/SVTM rasters, rasterize vector indicators, derive slope and binary
 penalties, and publish the 100 m normalized grid. `ico_model.route_assessment` and
 `scripts/assess_routes.py` convert route cells to EPSG:7844 GeoJSON and report
-independent preliminary length, terrain-proxy, and component-cell metrics.
+independent physical lengths and slope, vector feature inventories, SVTM raster
+classes, endpoint/grid-quality checks, and descriptive preset comparisons.
+`scripts/build_web_assets.py` removes raw source paths and packages the compact
+route/assessment data consumed by `web/`.
 
 ### 2. Study-area preparation
 
@@ -249,6 +253,12 @@ Responsibilities:
 - expose a restrained number of high-level weighting controls if supported by the routing architecture;
 - export the selected route and route assessment;
 - communicate methodology and preliminary-screening limitations clearly.
+
+The first verified implementation is `web/src/App.tsx`: it fetches the compact
+`web/public/data/routes.json` asset, renders route alternatives in MapLibre, switches
+between approved presets, shows key assessment metrics and inventory counts, and
+exports the selected route as GeoJSON or a feature-level CSV. It does not run routing
+in the browser and currently uses OpenStreetMap raster tiles as a contextual basemap.
 
 ## Routing Execution Architecture
 
