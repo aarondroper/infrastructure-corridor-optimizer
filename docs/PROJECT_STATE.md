@@ -53,7 +53,8 @@ are:
 
 There is still no verified evidence of:
 
-- deployment configuration or a live public application;
+- a live public application; Cloudflare Pages repository configuration is prepared and
+  documented, but account-authorized publication has not occurred;
 - CI or linting configuration;
 - a DXF export or arbitrary client-side routing.
 
@@ -165,9 +166,14 @@ and representative live endpoints. The following inputs remain unresolved:
 
 ## Deployment State
 
-No deployment is verified.
+Cloudflare Pages is the selected deployment target. The repository is prepared for a
+Git-integrated Pages project with root directory `web`, build command `npm run build`,
+output directory `dist`, and no environment variables or server-side features. The
+production artifact was built and browser-tested locally through `vite preview`.
+No public deployment is verified; account authorization and GitHub integration remain
+owner-controlled.
 
-No hosting provider is selected as a confirmed implementation decision.
+See `docs/DEPLOYMENT_CLOUDFLARE_PAGES.md` for exact setup and post-deployment checks.
 
 ## Test / Validation State
 
@@ -194,10 +200,11 @@ Verified through 15 September 2026:
 - `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python scripts/derive_geographic_grid.py ...` — published a real S1 100 m EPSG:7856 bundle of 990x767 cells, 8,329 unavailable DEM/SVTM nodata cells, transformed endpoint cells `[149, 125]` and `[880, 672]`, and all seven components. Shapely repaired 15 invalid NPWS polygon geometries; the other four vector inputs required no repair.
 - `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python scripts/generate_precomputed_routes.py ...` — generated shortest (732 cells, 832.807 cost), balanced (741 cells, 494.735 cost), and environmental (786 cells, 311.769 cost) routes with A*;
 - `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python scripts/assess_routes.py ...` with all five vector artifacts and the SVTM raster/archive — published feature-level inventories, EPSG:7844 GeoJSON, physical slope metrics, route-quality diagnostics, and independent lengths of 95.76 km, 96.28 km, and 99.17 km respectively. All routes used available cells, matched endpoint cells, avoided grid boundaries, and had simple centerlines;
-- `PYTHONPATH=src python3 scripts/build_web_assets.py ...` — published a 327,723-byte static asset containing the three route geometries, metrics, compact impact inventories, endpoint features, comparison data, and screening disclaimer with raw source paths removed;
+- `PYTHONPATH=src python3 scripts/build_web_assets.py ...` — published a 327,336-byte static asset containing the three route geometries, metrics, compact impact inventories, endpoint features, comparison data, and screening disclaimer with raw source paths removed;
 - `npm install` in `web/` — installed the declared React/TypeScript/MapLibre and Playwright browser-test dependencies;
 - `npm run build` in `web/` — TypeScript and Vite production build succeeded; the MapLibre bundle-size warning remains expected for the initial MVP;
-- `PLAYWRIGHT_BROWSERS_PATH=/tmp/ico-browser-cache npm run test:browser` in `web/` — three production-preview tests passed: desktop route switching/inspection/exports, initial-load responsive checks at 1280×800, 768×1024, and 390×844, and failed-asset error handling. Screenshots are retained under ignored `web/artifacts/browser-verification/`;
+- `ICO_PREVIEW_PORT=4174 PLAYWRIGHT_BROWSERS_PATH=/tmp/ico-browser-cache npm run test:browser` in `web/` — three production-preview tests passed against the rebuilt artifact: root load/reload, static shell/data asset responses, desktop route switching/inspection/exports, initial-load responsive checks at 1280×800, 768×1024, and 390×844, failed-asset error handling, and successful OpenStreetMap tile responses. Screenshots are retained under ignored `web/artifacts/browser-verification/`;
+- production artifact inspection — `web/dist/` contains `index.html`, hashed CSS/JS, `_headers`, and the 327,336-byte compact `data/routes.json`; the shell and analytical asset contain no local filesystem, development-host, raw-data, or cache references. `_headers` assigns immutable caching only to hashed `/assets/*` files;
 - the browser review confirmed visible route centerlines/endpoints, map controls and bounds, route switching, feature inspection, keyboard focus, no horizontal overflow, and no captured application console/page/runtime errors or local-asset request failures. OpenStreetMap tile requests remain an external runtime dependency;
 - bounded count-only probes returned 216,808 SVTM and 68,320 Hydroline features; 20-feature geometry samples measured approximately 8.1 KB and 0.77 KB per serialized feature respectively. No full SVTM vector artifact was published; the official classified raster representation is validated and accepted.
 - Hydroline validation independently confirmed 68,320 unique features, 355 pages, 16 tiles, and 965 tiled-inventory overlaps reconciled. The persistent final bundle is 105,232,759 bytes and its cache namespace is 108,584,694 bytes.
@@ -209,7 +216,7 @@ Verified through 15 September 2026:
 - `PYTHONPATH=src python3 scripts/acquire_svtm_package.py --cache-dir data/cache/seed/svtm-c2.0.m2.2 --output-dir data/external/vectors/svtm-package --timeout 15 --max-retries 0` — bounded package probe wrote only a 423-byte persistent state record and failed safely on the official endpoint's HTTP 202 web challenge; no archive bytes were materialized.
 
 No dedicated linting/type-check command beyond the successful TypeScript compiler,
-no automated accessibility audit and no deployment verification exists yet. Git status
+no automated accessibility audit and no public deployment verification exists yet. Git status
 and diff checks are available and are run before commits.
 
 ## Owner Decision Status
@@ -232,6 +239,6 @@ source stack, geographic grid, A* routes, feature-level assessments, compact ass
 local frontend build, and bounded browser verification are verified. The current
 preset evidence is classified as credible with no calibration currently justified;
 the comparison is recorded in `docs/ROUTE_ASSESSMENT.md`. The next frontier is
-deployment selection/verification and only then any separately authorized product
-polish or owner-reviewed analytical calibration. No engineering or regulatory
-approval is implied.
+Cloudflare Pages account-authorized publication/public-origin verification and only
+then any separately authorized product polish or owner-reviewed analytical calibration.
+No engineering or regulatory approval is implied.

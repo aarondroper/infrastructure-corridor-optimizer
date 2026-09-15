@@ -32,7 +32,9 @@ pipeline validates source manifests, derives a 100 m EPSG:7856 S1 grid, runs
 deterministic eight-neighbor A*/Dijkstra routing, and publishes georeferenced route
 and feature-level impact-assessment assets. The `web/` directory now contains the
 first static React/TypeScript + MapLibre application and Vite production build
-configuration; deployment is not yet verified. MapLibre provides the interactive
+configuration prepared for Cloudflare Pages; live deployment is not yet verified.
+Cloudflare Pages is the selected static target, with `web/` as the project root and
+`dist` as its output relative to that root. MapLibre provides the interactive
 basemap and camera, while the precomputed route centerlines and endpoints are drawn
 in a synchronized SVG overlay. This keeps the browser layer static and deterministic
 after the browser's GeoJSON-worker path proved unreliable in bounded production
@@ -398,17 +400,25 @@ Substituting an approved important dataset with a materially different source is
 
 ## Deployment Architecture
 
-The intended deployment is static or predominantly static.
+The selected deployment target for the current MVP is Cloudflare Pages. The verified
+repository configuration is a static Vite build from the `web/` project root with
+`npm run build` producing `dist`. Live publication and public-origin verification are
+not yet complete.
 
-Preferred characteristics:
+Implemented characteristics:
 
-- frontend served from inexpensive static/edge hosting;
+- frontend served from inexpensive static/edge hosting, pending account-authorized
+  publication;
 - analytical outputs produced during build/preprocessing;
 - no always-on GIS server;
-- no paid service dependency unless explicitly approved;
+- no paid service dependency or Cloudflare server-side feature;
 - application capable of functioning from compact versioned web assets.
 
-A specific hosting provider has not been selected.
+Cloudflare Pages applies the checked-in `web/public/_headers` metadata to cache hashed
+Vite assets as immutable. The stable analytical JSON asset is intentionally not given
+an immutable cache directive. No rewrite configuration is required while the MVP has
+only the root application URL. See `docs/DEPLOYMENT_CLOUDFLARE_PAGES.md` for the
+account-authorized setup and post-deployment checks.
 
 ## Important Technical Boundaries
 

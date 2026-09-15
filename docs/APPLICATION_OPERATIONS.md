@@ -33,12 +33,22 @@ The Vite output is `web/dist/` and is ignored by Git. `web/node_modules/` is als
 ignored. The app currently uses OpenStreetMap raster tiles at runtime, so a deployed
 build still has a public basemap dependency; route and assessment assets are static.
 
+## Cloudflare Pages release configuration
+
+Cloudflare Pages is the selected deployment target. Connect the GitHub repository and
+set the project root to `web`, the build command to `npm run build`, and the output
+directory to `dist` relative to that root. No environment variables or server-side
+Cloudflare features are required. The checked-in `web/public/_headers` file applies a
+long immutable cache lifetime only to Vite's hashed `/assets/*` files. The deployment
+is not public or verified yet; owner setup and the public-origin checklist are in
+`docs/DEPLOYMENT_CLOUDFLARE_PAGES.md`.
+
 ## Browser verification
 
 Run the production-style preview checks from `web/` after building:
 
 ```bash
-PLAYWRIGHT_BROWSERS_PATH=/tmp/ico-browser-cache npm run test:browser
+ICO_PREVIEW_PORT=4174 PLAYWRIGHT_BROWSERS_PATH=/tmp/ico-browser-cache npm run test:browser
 ```
 
 The suite uses Chromium against `vite preview` and verifies the desktop interaction
@@ -46,6 +56,8 @@ flow, route switching, impact inspection, exports, asset-failure handling, and
 initial loads at 1440×900, 1280×800, 768×1024, and 390×844. Visual evidence is written to the
 ignored `web/artifacts/browser-verification/` directory. The browser cache is an
 explicit bounded verification dependency under `/tmp`, not project source storage.
+The suite also checks direct root reload, application/data asset responses, and
+successful OpenStreetMap tile responses when the public tile service is reachable.
 
 The UI provides approved preset switching, key route metrics, compact impact counts,
 GeoJSON download, and a feature-level crossings CSV download. It remains a
@@ -58,8 +70,8 @@ preliminary corridor-screening presentation, not engineering approval.
 - Feature inventories count intersected source records. Hydroline, road, and rail
   source segmentation can yield multiple records for one named physical crossing.
 - The app has passed the bounded browser and visual review above. It has no automated
-  accessibility audit yet, and deployment verification remains pending provider
-  selection/credentials. The route centerlines and endpoints are rendered as a
+  accessibility audit yet, and Cloudflare Pages deployment verification remains
+  pending account authorization. The route centerlines and endpoints are rendered as a
   camera-synchronized SVG overlay over the MapLibre basemap; the analytical route
   and assessment data remain static and precomputed.
 - The basemap is external and is not an analytical input.

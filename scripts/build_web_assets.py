@@ -16,6 +16,23 @@ def _load(path: Path) -> dict[str, Any]:
     return value
 
 
+_PRIVATE_PATH_KEYS = {"source", "artifact_path", "raster_path", "cache_path", "manifest_path"}
+
+
+def _strip_private_paths(value: Any) -> Any:
+    """Remove filesystem provenance that must not enter a public web asset."""
+
+    if isinstance(value, dict):
+        return {
+            key: _strip_private_paths(item)
+            for key, item in value.items()
+            if key not in _PRIVATE_PATH_KEYS
+        }
+    if isinstance(value, list):
+        return [_strip_private_paths(item) for item in value]
+    return value
+
+
 def build_web_assets(assessments_path: str | Path, routes_dir: str | Path, config_path: str | Path) -> dict[str, Any]:
     assessments_file = Path(assessments_path).resolve()
     routes_root = Path(routes_dir).resolve()
@@ -28,8 +45,7 @@ def build_web_assets(assessments_path: str | Path, routes_dir: str | Path, confi
         inventory = assessment.get("impact_inventory", {})
         compact_inventory = {}
         for component, layer in inventory.items():
-            compact = {key: value for key, value in layer.items() if key != "source"}
-            compact_inventory[component] = compact
+            compact_inventory[component] = _strip_private_paths(layer)
         routes.append(
             {
                 "preset": preset,

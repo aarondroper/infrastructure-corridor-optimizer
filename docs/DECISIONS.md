@@ -250,3 +250,20 @@ artifact date. The pipeline may select the fallback only after the primary fails
 same local artifact checks for file availability, CRS metadata, resolution, complete
 coverage, and nodata declaration. The current implementation validates sidecars; it
 does not claim to download or process DEM pixels.
+
+---
+
+## D021 — Use Cloudflare Pages for the Static MVP
+
+**Decision:** Publish the existing static React/TypeScript + MapLibre MVP through
+Cloudflare Pages, using the `web` directory as the project root and Vite's `dist`
+output.
+
+**Rationale:** The application requires only static HTML, hashed frontend assets, and
+the compact precomputed route asset. Cloudflare Pages provides commit-linked static
+builds without introducing a backend, GIS service, database, or server-side runtime.
+
+**Consequences:** The repository must remain deployable with `npm run build` from
+`web/`, and live deployment must be separately verified. OpenStreetMap remains an
+external runtime basemap dependency. Account authorization and GitHub integration are
+owner-controlled steps; no public deployment is claimed until they are complete.

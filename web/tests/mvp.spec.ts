@@ -18,9 +18,30 @@ async function attachIssueCapture(page: Page) {
 
 test("desktop production flow loads, switches routes, inspects impacts, and exports", async ({ page }) => {
   const issues = await attachIssueCapture(page);
+  const basemapStatuses: number[] = [];
+  page.on("response", (response) => {
+    if (response.url().includes("tile.openstreetmap.org")) basemapStatuses.push(response.status());
+  });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /One corridor, three defensible trade-offs/ })).toBeVisible();
+  const rootResponse = await page.request.get("/");
+  expect(rootResponse.status()).toBe(200);
+  const rootHtml = await rootResponse.text();
+  expect(rootHtml).toContain("/assets/");
+  expect(rootHtml).not.toMatch(/(?:file:\/\/|\/home\/|\/tmp\/|127\.0\.0\.1|localhost)/);
+  const localAssetPaths = [...rootHtml.matchAll(/(?:src|href)=\"(\/assets\/[^\"]+)\"/g)].map((match) => match[1]);
+  expect(localAssetPaths.length).toBeGreaterThan(0);
+  for (const assetPath of localAssetPaths) {
+    expect((await page.request.get(assetPath)).status(), assetPath).toBe(200);
+  }
+  const routeAssetResponse = await page.request.get("/data/routes.json");
+  expect(routeAssetResponse.status()).toBe(200);
+  expect(routeAssetResponse.headers()["content-type"]).toContain("application/json");
+  const routeAsset = await routeAssetResponse.json();
+  expect(routeAsset.routes).toHaveLength(3);
+  expect(routeAsset.endpoints.features).toHaveLength(2);
+  await page.reload();
   await expect(page.locator(".preset.selected")).toContainText("Balanced");
   await expect(page.locator(".map canvas")).toBeVisible();
   await expect(page.locator(".map-badge")).toContainText("Balanced");
@@ -65,6 +86,8 @@ test("desktop production flow loads, switches routes, inspects impacts, and expo
 
   await fs.mkdir(screenshotRoot, { recursive: true });
   await page.screenshot({ path: `${screenshotRoot}/desktop-1440.png`, fullPage: true });
+  await page.waitForTimeout(1_000);
+  expect(basemapStatuses.some((status) => status >= 200 && status < 300), `OpenStreetMap statuses: ${basemapStatuses.join(", ")}`).toBeTruthy();
   expect(issues, issues.join("\n")).toEqual([]);
 });
 

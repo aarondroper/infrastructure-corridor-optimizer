@@ -20,7 +20,14 @@ class WebAssetTests(unittest.TestCase):
                     "slope_mean_degrees": 2.0,
                     "slope_max_degrees": 4.0,
                     "diagnostics": {"route_is_available": True},
-                    "impact_inventory": {"roads": {"source": {"artifact_path": "/private/raw.json"}, "features": []}},
+                    "impact_inventory": {
+                        "roads": {"source": {"artifact_path": "/private/raw.json"}, "features": []},
+                        "native_vegetation": {
+                            "raster_path": "/private/svtm.tif",
+                            "raster_sha256": "abc",
+                            "features": [],
+                        },
+                    },
                 }],
             }
             config = {"endpoints": {"origin": {"name": "A", "longitude": 151, "latitude": -32}, "destination": {"name": "B", "longitude": 151.1, "latitude": -32.1}}}
@@ -30,6 +37,8 @@ class WebAssetTests(unittest.TestCase):
             payload = build_web_assets(root / "assessments.json", root, root / "config.json")
         self.assertEqual(payload["routes"][0]["description"], "short")
         self.assertNotIn("source", payload["routes"][0]["impact_inventory"]["roads"])
+        self.assertNotIn("raster_path", payload["routes"][0]["impact_inventory"]["native_vegetation"])
+        self.assertEqual(payload["routes"][0]["impact_inventory"]["native_vegetation"]["raster_sha256"], "abc")
         self.assertEqual(len(payload["endpoints"]["features"]), 2)
 
 
