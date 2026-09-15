@@ -263,7 +263,8 @@ Responsibilities:
 
 The first verified implementation is `web/src/App.tsx`: it fetches the compact
 `web/public/data/routes.json` asset, renders the MapLibre basemap with a synchronized
-SVG overlay for route alternatives and endpoints, switches between approved presets,
+SVG overlay for all three route alternatives and endpoints with a compact route-identity
+legend, switches between approved presets,
 shows key assessment metrics and inventory counts, and exports the selected route as
 GeoJSON or a feature-level CSV. It does not run routing in the browser and currently
 uses OpenStreetMap raster tiles as a contextual basemap. Its current application shell

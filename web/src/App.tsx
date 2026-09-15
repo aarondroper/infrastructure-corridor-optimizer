@@ -25,9 +25,9 @@ const PRESET_LABELS: Record<Preset, string> = {
 };
 
 const PRESET_UI_DESCRIPTIONS: Record<Preset, string> = {
-  shortest: "Minimizes route length while retaining visible constraint trade-offs.",
-  balanced: "Balances length, terrain, environmental sensitivity, and crossings.",
-  environmental: "Prioritizes lower environmental sensitivity while retaining a length control.",
+  shortest: "Strong preference for route length.",
+  balanced: "Balances length, terrain, impacts, and crossings.",
+  environmental: "Prioritizes lower environmental sensitivity.",
 };
 
 function format(value: number | null | undefined, digits = 1): string {
@@ -77,11 +77,12 @@ function MapPanel({ data, selected }: { data: AppData; selected: Preset }) {
   return <div className="map-wrap" data-map-layers="loading">
     <div ref={container} className="map" aria-label={`Map showing the ${PRESET_LABELS[selected]} route`} />
     {mapInstance && <svg className="route-overlay" role="img" aria-label="Precomputed route overlay" data-rendered-route-features={projectedRoutes.length} data-rendered-endpoint-features={projectedEndpoints.length}>
-      {projectedRoutes.map((route) => <polyline key={`${route.preset}-muted`} className="route-line route-line-muted" data-preset={route.preset} points={route.points} />)}
-      {projectedRoutes.filter((route) => route.preset === selected).map((route) => <g key={`${route.preset}-selected`}><polyline className="route-line route-line-casing" data-preset={route.preset} points={route.points} /><polyline className="route-line route-line-selected" data-preset={route.preset} points={route.points} /></g>)}
+      {projectedRoutes.filter((route) => route.preset !== selected).map((route) => <polyline key={`${route.preset}-muted`} className={`route-line route-line-${route.preset}`} data-preset={route.preset} points={route.points} />)}
+      {projectedRoutes.filter((route) => route.preset === selected).map((route) => <g key={`${route.preset}-selected`}><polyline className="route-line route-line-casing" data-preset={route.preset} points={route.points} /><polyline className={`route-line route-line-selected route-line-selected-${route.preset}`} data-preset={route.preset} points={route.points} /></g>)}
       {projectedEndpoints.map((endpoint: AnyRecord) => <g key={endpoint.properties.name} className="route-endpoint"><circle cx={endpoint.point.x} cy={endpoint.point.y} r="6" /><text x={endpoint.point.x} y={endpoint.point.y + (endpoint.properties.role === "destination" ? -10 : 21)}>{endpoint.properties.name}</text></g>)}
     </svg>}
-    <div className="map-caption">S1 · 100 m analysis grid · route centerlines shown for preliminary screening</div>{selectedRoute && <div className="map-badge" role="status">{PRESET_LABELS[selected]} route selected</div>}
+    <div className="map-legend" aria-label="Candidate routes"><span className="map-legend-heading">Candidate routes</span>{data.routes.map((route) => <div className={`map-legend-item ${route.preset === selected ? "selected" : ""}`} key={route.preset}><span className={`route-swatch route-swatch-${route.preset}`} aria-hidden="true" /><span>{PRESET_LABELS[route.preset]}</span>{route.preset === selected && <span className="legend-selected">Selected</span>}</div>)}</div>
+    <div className="map-caption">S1 · 100 m analysis grid · route centerlines shown for preliminary screening</div>{selectedRoute && <div className="map-badge" role="status"><span className={`route-swatch route-swatch-${selected}`} aria-hidden="true" />{PRESET_LABELS[selected]} route selected</div>}
   </div>;
 }
 
@@ -105,7 +106,7 @@ function StrategyPanel({ data, selected, onSelect }: { data: AppData; selected: 
       <p>Select a precomputed route to inspect its trade-offs.</p>
     </div>
     <div className="preset-list">{data.routes.map((item) => <button className={`preset ${item.preset === selected ? "selected" : ""}`} key={item.preset} onClick={() => onSelect(item.preset)} aria-pressed={item.preset === selected}>
-      <span><strong>{PRESET_LABELS[item.preset]}</strong><small>{PRESET_UI_DESCRIPTIONS[item.preset]}</small></span>
+      <span className={`route-swatch route-swatch-${item.preset}`} aria-hidden="true" /><span className="preset-copy"><strong>{PRESET_LABELS[item.preset]}</strong><small>{PRESET_UI_DESCRIPTIONS[item.preset]}</small></span>
     </button>)}</div>
   </aside>;
 }
@@ -116,7 +117,7 @@ function AssessmentPanel({ route, selected, csv }: { route: AppData["routes"][nu
   return <aside className="assessment-panel panel" aria-label="Route summary">
     <div className="panel-heading">
       <p className="panel-kicker">Route summary</p>
-      <h2>{PRESET_LABELS[selected]} route</h2>
+      <h2><span className={`route-swatch route-swatch-${selected}`} aria-hidden="true" />{PRESET_LABELS[selected]} route</h2>
     </div>
     <div className="selected-summary">
       <div className="metric-primary"><span>Selected route</span><strong>{format(route.metrics.route_length_km, 2)} km</strong></div>
@@ -148,7 +149,7 @@ function AssessmentPanel({ route, selected, csv }: { route: AppData["routes"][nu
 function ComparisonStrip({ data, selected, onSelect }: { data: AppData; selected: Preset; onSelect: (preset: Preset) => void }) {
   return <section className="comparison-strip" aria-labelledby="comparison-heading">
     <div className="comparison-title"><h2 id="comparison-heading">Route comparison</h2><p>Evidence at a glance</p></div>
-    <div className="comparison-table"><div className="table-head"><span>Preset</span><span>Length</span><span>Native veg.</span><span>Hydroline</span><span>Major roads</span></div>{data.routes.map((item) => { const itemInv = item.impact_inventory; return <button className={`table-row ${item.preset === selected ? "active" : ""}`} key={item.preset} onClick={() => onSelect(item.preset)} aria-pressed={item.preset === selected}><span>{PRESET_LABELS[item.preset]}</span><span>{format(item.metrics.route_length_km, 2)} km</span><span>{itemInv.native_vegetation?.native_vegetation_cell_count ?? "—"}</span><span>{itemInv.hydrography_line?.crossing_feature_count ?? "—"}</span><span>{itemInv.roads?.major_road_intersection_count ?? "—"}</span></button>; })}</div>
+    <div className="comparison-table"><div className="table-head"><span>Preset</span><span>Length</span><span>Native veg.</span><span>Hydroline</span><span>Major roads</span></div>{data.routes.map((item) => { const itemInv = item.impact_inventory; return <button className={`table-row ${item.preset === selected ? "active" : ""}`} key={item.preset} onClick={() => onSelect(item.preset)} aria-pressed={item.preset === selected}><span className="comparison-preset"><span className={`route-swatch route-swatch-${item.preset}`} aria-hidden="true" />{PRESET_LABELS[item.preset]}</span><span>{format(item.metrics.route_length_km, 2)} km</span><span>{itemInv.native_vegetation?.native_vegetation_cell_count ?? "—"}</span><span>{itemInv.hydrography_line?.crossing_feature_count ?? "—"}</span><span>{itemInv.roads?.major_road_intersection_count ?? "—"}</span></button>; })}</div>
   </section>;
 }
 

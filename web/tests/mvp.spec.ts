@@ -59,6 +59,10 @@ test("desktop production flow loads, switches routes, inspects impacts, and expo
   await expect(page.locator(".map-wrap")).toHaveAttribute("data-map-layers", "basemap,route-overlay,endpoints,endpoint-labels");
   await expect(page.locator(".route-overlay")).toHaveAttribute("data-rendered-route-features", "3");
   await expect(page.locator(".route-overlay")).toHaveAttribute("data-rendered-endpoint-features", "2");
+  await expect(page.locator(".map-legend-item")).toHaveCount(3);
+  for (const preset of ["shortest", "balanced", "environmental"]) {
+    await expect(page.locator(`.route-line[data-preset="${preset}"]:not(.route-line-casing)`)).toHaveCount(1);
+  }
   await expect(page.locator(".route-line-selected")).toHaveCount(1);
   await expect(page.locator(".route-endpoint text").filter({ hasText: "Bayswater" })).toBeVisible();
   await expect(page.locator(".route-endpoint text").filter({ hasText: "Eraring" })).toBeVisible();
@@ -69,6 +73,7 @@ test("desktop production flow loads, switches routes, inspects impacts, and expo
     await expect(page.locator(".preset.selected")).toContainText(preset);
     await expect(page.locator(".route-line-selected")).toHaveCount(1);
     await expect(page.locator(".route-line-selected")).toHaveAttribute("data-preset", preset.toLowerCase());
+    await expect(page.locator(".map-legend-item.selected")).toContainText(preset);
   }
 
   await page.locator(".table-row").filter({ hasText: "Shortest" }).click();

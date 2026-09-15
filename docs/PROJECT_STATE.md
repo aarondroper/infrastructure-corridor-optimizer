@@ -154,9 +154,11 @@ The current shell is compact and map-first: desktop uses strategy rail, map, and
 assessment columns with an integrated comparison strip; tablet and mobile use
 intentional stacked layouts. The follow-on density refinement keeps this shell while
 shortening strategy presentation copy and tightening panel, map-overlay, comparison,
-and footer treatments.
+and footer treatments. The current map-comparison polish keeps the shell while showing
+all three existing route centerlines together with restrained route identities, a
+compact legend, and distinct selection/focus states.
 The previously deployed public origin remains verified for commit `6c4d543`; the
-current density-refinement commit has not been publicly redeployed in this milestone.
+current map-comparison polish commit has not been publicly redeployed in this milestone.
 
 ## Open Inputs / Limitations
 
@@ -233,7 +235,13 @@ Verified through 15 September 2026:
   including the unchanged route, inventory, export, focus, error, responsive, and
   OSM checks at all four required viewports; the regenerated density-polish
   screenshots were visually inspected;
-- `npm audit --omit=dev` — reported zero vulnerabilities after the density refinement;
+- `ICO_PREVIEW_PORT=4193 PLAYWRIGHT_BROWSERS_PATH=/tmp/ico-browser-cache npm run test:browser`
+  in `web/` — all three production-preview tests passed after the map-comparison
+  polish, including simultaneous three-route rendering, legend identity/selection,
+  unchanged route switching, inventory, export, focus, error, responsive, and OSM
+  checks at all four required viewports; the regenerated screenshots were visually
+  inspected;
+- `npm audit --omit=dev` — reported zero vulnerabilities after the map-comparison polish;
 - `ICO_BASE_URL=https://infrastructure-corridor-optimizer.aaronroper.workers.dev ICO_STRICT_NETWORK=1 PLAYWRIGHT_BROWSERS_PATH=/tmp/ico-browser-cache npm run test:browser` in `web/` — all three public-origin tests passed at 1440×900, 1280×800, 768×1024, and 390×844, covering root reload, static assets, route switching, inspection, exports, responsive layout, error handling, focus, and OSM tile responses. Expected obsolete-tile `net::ERR_ABORTED` cancellations were excluded; no genuine network, console, or page errors were observed. Screenshots are retained under ignored `web/artifacts/browser-verification/`;
 - live artifact comparison — public `routes.json`, hashed JavaScript, and hashed CSS SHA-256 values match the local production build for commit `6c4d543`; hashed assets return `public, max-age=31536000, immutable`, while `routes.json` returns `public, max-age=0, must-revalidate`;
 - production artifact inspection — `web/dist/` contains `index.html`, hashed CSS/JS, `_headers`, and the 327,336-byte compact `data/routes.json`; the shell and analytical asset contain no local filesystem, development-host, raw-data, or cache references. `_headers` assigns immutable caching only to hashed `/assets/*` files;
@@ -276,6 +284,6 @@ the comparison is recorded in `docs/ROUTE_ASSESSMENT.md`. The visual-system,
 application-shell, and density refinements are complete in the current tree and locally
 verified;
 the existing public origin still serves the prior verified build until this commit is
-deployed. The next frontier is the normal release of this shell commit and,
+deployed. The next frontier is the normal release of this map-comparison polish commit and,
 separately, any owner-reviewed analytical calibration or future product scope. No
 engineering or regulatory approval is implied.
