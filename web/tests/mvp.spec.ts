@@ -31,6 +31,12 @@ test("desktop production flow loads, switches routes, inspects impacts, and expo
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Infrastructure Corridor Optimizer", exact: true })).toBeVisible();
   await expect(page.getByText(/Hunter \/ New England, NSW · Scenario S1/)).toBeVisible();
+  const logo = page.locator(".app-logo");
+  await expect(logo).toBeVisible();
+  await expect(logo).toHaveAttribute("src", "/branding/app-logo.svg");
+  expect(await logo.evaluate((element: HTMLImageElement) => ({ width: element.getBoundingClientRect().width, height: element.getBoundingClientRect().height, naturalWidth: element.naturalWidth }))).toMatchObject({ width: 32, height: 32 });
+  expect(await logo.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
+  expect((await page.request.get("/branding/app-logo.svg")).status()).toBe(200);
   await expect(page.getByText("One corridor, three defensible trade-offs.", { exact: true })).toHaveCount(0);
   const rootResponse = await page.request.get("/");
   expect(rootResponse.status()).toBe(200);

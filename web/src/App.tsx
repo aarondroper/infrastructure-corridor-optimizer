@@ -169,7 +169,7 @@ function App() {
   const csv = [["route_preset", "component", "source_object_id", "intersection_length_m", "major_road", "source_name"], ...inventoryCsvRows].map((row) => row.map(csvCell).join(",")).join("\n");
   return <main className="app-frame">
     <header className="app-header">
-      <div className="brand"><h1>Infrastructure Corridor Optimizer</h1><p>Preliminary corridor screening · Hunter / New England, NSW · Scenario {data.scenario}</p></div>
+      <div className="brand-lockup"><img className="app-logo" src="/branding/app-logo.svg" alt="" /><div className="brand"><h1>Infrastructure Corridor Optimizer</h1><p>Preliminary corridor screening · Hunter / New England, NSW · Scenario {data.scenario}</p></div></div>
       <div className="status" role="status" aria-label="Route asset status"><span className="status-label">Offline route assets</span><span className="status-value">Validated · source-backed</span></div>
     </header>
     <section className="app-shell" aria-label="Corridor route workspace">

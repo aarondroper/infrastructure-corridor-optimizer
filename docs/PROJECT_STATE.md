@@ -51,6 +51,8 @@ are:
 - `web/src/App.tsx`, `web/src/styles.css`, `web/src/main.tsx`, `web/tests/mvp.spec.ts`,
   and `web/playwright.config.ts`: static application shell, Source Sans 3 visual
   system, and bounded production-preview/browser verification;
+- `web/public/branding/app-logo.svg`: replaceable decorative application-mark asset
+  referenced directly by the compact frontend header;
 
 There is still no verified evidence of:
 

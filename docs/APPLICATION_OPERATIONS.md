@@ -33,6 +33,9 @@ The Vite output is `web/dist/` and is ignored by Git. `web/node_modules/` is als
 ignored. The app currently uses OpenStreetMap raster tiles at runtime, so a deployed
 build still has a public basemap dependency; route and assessment assets are static.
 
+To provide the final application mark, replace `web/public/branding/app-logo.svg` and
+rebuild/deploy the frontend.
+
 ## Cloudflare Pages release configuration
 
 Cloudflare Pages is the selected deployment target. Connect the GitHub repository and
