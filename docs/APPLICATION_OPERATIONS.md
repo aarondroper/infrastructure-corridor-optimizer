@@ -40,7 +40,10 @@ set the project root to `web`, the build command to `npm run build`, and the out
 directory to `dist` relative to that root. No environment variables or server-side
 Cloudflare features are required. The checked-in `web/public/_headers` file applies a
 long immutable cache lifetime only to Vite's hashed `/assets/*` files. The deployment
-is not public or verified yet; owner setup and the public-origin checklist are in
+is public and verified at the documented `workers.dev` origin. The current
+visual-polish changes are production-preview verified locally and will take effect
+publicly when the normal Cloudflare release workflow publishes this commit. The
+public-origin checklist remains in
 `docs/DEPLOYMENT_CLOUDFLARE_PAGES.md`.
 
 ## Browser verification
@@ -70,8 +73,8 @@ preliminary corridor-screening presentation, not engineering approval.
 - Feature inventories count intersected source records. Hydroline, road, and rail
   source segmentation can yield multiple records for one named physical crossing.
 - The app has passed the bounded browser and visual review above. It has no automated
-  accessibility audit yet, and Cloudflare Pages deployment verification remains
-  pending account authorization. The route centerlines and endpoints are rendered as a
+  accessibility audit yet, and the current visual-polish commit has not yet been
+  reverified on the public origin. The route centerlines and endpoints are rendered as a
   camera-synchronized SVG overlay over the MapLibre basemap; the analytical route
   and assessment data remain static and precomputed.
 - The basemap is external and is not an analytical input.

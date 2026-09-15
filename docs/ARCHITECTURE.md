@@ -32,7 +32,8 @@ pipeline validates source manifests, derives a 100 m EPSG:7856 S1 grid, runs
 deterministic eight-neighbor A*/Dijkstra routing, and publishes georeferenced route
 and feature-level impact-assessment assets. The `web/` directory now contains the
 first static React/TypeScript + MapLibre application and Vite production build
-configuration prepared for Cloudflare Pages; live deployment is not yet verified.
+configuration prepared for Cloudflare Pages; a live Cloudflare static deployment is
+verified at the documented workers.dev origin.
 Cloudflare Pages is the selected static target, with `web/` as the project root and
 `dist` as its output relative to that root. MapLibre provides the interactive
 basemap and camera, while the precomputed route centerlines and endpoints are drawn
@@ -266,6 +267,12 @@ SVG overlay for route alternatives and endpoints, switches between approved pres
 shows key assessment metrics and inventory counts, and exports the selected route as
 GeoJSON or a feature-level CSV. It does not run routing in the browser and currently
 uses OpenStreetMap raster tiles as a contextual basemap.
+
+The current visual system is implemented in `web/src/styles.css` and uses bundled
+Latin Source Sans 3 weights for the interface, tabular numerals for measurements, a
+small shared spacing/radius/color token set, and application-specific styling for
+the map controls and dark route-strategy panel. This is a presentation refinement;
+it does not change route assets, analytical semantics, or the SVG overlay architecture.
 
 ## Routing Execution Architecture
 

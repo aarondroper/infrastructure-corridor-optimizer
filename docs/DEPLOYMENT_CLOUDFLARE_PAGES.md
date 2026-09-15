@@ -65,11 +65,11 @@ asset error state, and successful OpenStreetMap tile responses when the public t
 service is reachable. `ICO_PREVIEW_PORT` avoids collisions with another local
 preview server.
 
-The verified build currently contains:
+The verified local build for the current visual-polish tree currently contains:
 
 - `index.html` — 474 bytes;
-- hashed CSS — 88,943 bytes;
-- hashed JavaScript — 1,181,091 bytes;
+- hashed CSS — 92,310 bytes;
+- hashed JavaScript — 1,181,166 bytes;
 - `data/routes.json` — 327,336 bytes;
 - `_headers` — 63 bytes.
 
@@ -97,6 +97,11 @@ responsive layout, asset failure handling, and successful OpenStreetMap response
 Strict network capture found no console/page errors or genuine failed requests. It did
 observe expected `net::ERR_ABORTED` cancellations for obsolete OSM tiles while MapLibre
 settled the camera; successful tile responses were also observed.
+
+The current visual-polish tree has separately passed the same production-preview
+browser suite and visual screenshot review at all four viewports. That local evidence
+does not change the public deployment claim until this commit is released through the
+Cloudflare workflow.
 
 ## Owner deployment steps
 

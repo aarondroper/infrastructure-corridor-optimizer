@@ -89,9 +89,12 @@ test("desktop production flow loads, switches routes, inspects impacts, and expo
   const focusOutline = await firstButton.evaluate((element) => getComputedStyle(element).outlineStyle);
   expect(focusOutline).toBe("solid");
 
+  const interfaceFont = await page.locator("h1").evaluate((element) => getComputedStyle(element).fontFamily);
+  expect(interfaceFont).toContain("Source Sans 3");
+
   await fs.mkdir(screenshotRoot, { recursive: true });
-  await page.screenshot({ path: `${screenshotRoot}/desktop-1440.png`, fullPage: true });
   await page.waitForTimeout(1_000);
+  await page.screenshot({ path: `${screenshotRoot}/desktop-1440.png`, fullPage: true });
   expect(basemapStatuses.some((status) => status >= 200 && status < 300), `OpenStreetMap statuses: ${basemapStatuses.join(", ")}`).toBeTruthy();
   expect(issues, issues.join("\n")).toEqual([]);
 });
@@ -111,6 +114,7 @@ test("responsive viewports preserve the map and avoid horizontal overflow", asyn
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow, `${viewport.name} horizontal overflow`).toBeLessThanOrEqual(1);
     await fs.mkdir(screenshotRoot, { recursive: true });
+    await page.waitForTimeout(1_000);
     await page.screenshot({ path: `${screenshotRoot}/${viewport.name}.png`, fullPage: true });
   }
   expect(issues, issues.join("\n")).toEqual([]);

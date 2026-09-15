@@ -48,8 +48,9 @@ are:
 - `docs/ANALYTICAL_MODEL.md`: model semantics, evidence, and current execution boundary.
 - `docs/ROUTE_ASSESSMENT.md`: verified S1 route metrics, preset interpretation, and
   calibration classification;
-- `web/src/App.tsx`, `web/tests/mvp.spec.ts`, and `web/playwright.config.ts`: static
-  application and bounded production-preview browser verification;
+- `web/src/App.tsx`, `web/src/styles.css`, `web/src/main.tsx`, `web/tests/mvp.spec.ts`,
+  and `web/playwright.config.ts`: static application, Source Sans 3 visual system,
+  and bounded production-preview/browser verification;
 
 There is still no verified evidence of:
 
@@ -142,14 +143,15 @@ These are preserved in `docs/DECISIONS.md` and do not establish that correspondi
 Priority 2 and the core Priority 3/4 analytical deliverables are complete for the
 current S1 slice. The complete approved source stack, 100 m geographic grid, three
 real offline routes, feature-level vector/raster impact inventories, physical route
-metrics, plausibility diagnostics, and a 327,723-byte compact web asset are present in
+metrics, plausibility diagnostics, and a 327,336-byte compact web asset are present in
 ignored persistent storage or generated application source. The first static
 React/TypeScript + MapLibre MVP is implemented, builds locally, and has passed
 bounded Chromium production-preview verification at desktop, laptop, tablet, and
 mobile viewports. MapLibre supplies the basemap and a synchronized SVG overlay
 supplies the precomputed route centerlines/endpoints; this avoids an observed
 MapLibre GeoJSON-worker loading failure while preserving the static architecture.
-Deployment remains unverified.
+The previously deployed public origin remains verified for commit `6c4d543`; the
+current visual-polish commit has not been publicly redeployed in this milestone.
 
 ## Open Inputs / Limitations
 
@@ -206,7 +208,15 @@ Verified through 15 September 2026:
 - `PYTHONPATH=src:. /tmp/ico-gis-venv/bin/python scripts/assess_routes.py ...` with all five vector artifacts and the SVTM raster/archive — published feature-level inventories, EPSG:7844 GeoJSON, physical slope metrics, route-quality diagnostics, and independent lengths of 95.76 km, 96.28 km, and 99.17 km respectively. All routes used available cells, matched endpoint cells, avoided grid boundaries, and had simple centerlines;
 - `PYTHONPATH=src python3 scripts/build_web_assets.py ...` — published a 327,336-byte static asset containing the three route geometries, metrics, compact impact inventories, endpoint features, comparison data, and screening disclaimer with raw source paths removed;
 - `npm install` in `web/` — installed the declared React/TypeScript/MapLibre and Playwright browser-test dependencies;
-- `npm run build` in `web/` — TypeScript and Vite production build succeeded; the MapLibre bundle-size warning remains expected for the initial MVP;
+- `npm run build` in `web/` — TypeScript and Vite production build succeeded with
+  self-hosted Latin Source Sans 3 font assets; the MapLibre bundle-size warning
+  remains expected for the initial MVP;
+- `ICO_PREVIEW_PORT=4179 PLAYWRIGHT_BROWSERS_PATH=/tmp/ico-browser-cache npm run test:browser`
+  in `web/` — all three production-preview tests passed after the visual refinement,
+  covering route switching, impact inspection, exports, focus styling, the Source
+  Sans 3 assertion, error handling, responsive overflow, and OSM tile responses at
+  1440×900, 1280×800, 768×1024, and 390×844. Screenshots were regenerated after a
+  bounded basemap-render wait and visually inspected at all four viewports;
 - `ICO_BASE_URL=https://infrastructure-corridor-optimizer.aaronroper.workers.dev ICO_STRICT_NETWORK=1 PLAYWRIGHT_BROWSERS_PATH=/tmp/ico-browser-cache npm run test:browser` in `web/` — all three public-origin tests passed at 1440×900, 1280×800, 768×1024, and 390×844, covering root reload, static assets, route switching, inspection, exports, responsive layout, error handling, focus, and OSM tile responses. Expected obsolete-tile `net::ERR_ABORTED` cancellations were excluded; no genuine network, console, or page errors were observed. Screenshots are retained under ignored `web/artifacts/browser-verification/`;
 - live artifact comparison — public `routes.json`, hashed JavaScript, and hashed CSS SHA-256 values match the local production build for commit `6c4d543`; hashed assets return `public, max-age=31536000, immutable`, while `routes.json` returns `public, max-age=0, must-revalidate`;
 - production artifact inspection — `web/dist/` contains `index.html`, hashed CSS/JS, `_headers`, and the 327,336-byte compact `data/routes.json`; the shell and analytical asset contain no local filesystem, development-host, raw-data, or cache references. `_headers` assigns immutable caching only to hashed `/assets/*` files;
@@ -245,7 +255,9 @@ The first analytical and static-MVP execution slice is complete: the approved S1
 source stack, geographic grid, A* routes, feature-level assessments, compact assets,
 local frontend build, and bounded browser verification are verified. The current
 preset evidence is classified as credible with no calibration currently justified;
-the comparison is recorded in `docs/ROUTE_ASSESSMENT.md`. The next frontier is the
-account-level confirmation of the live Cloudflare delivery product/project identity,
-followed by only separately authorized product polish or owner-reviewed analytical
-calibration. No engineering or regulatory approval is implied.
+the comparison is recorded in `docs/ROUTE_ASSESSMENT.md`. The visual-system refinement
+is complete in the current tree and locally verified; the existing public origin
+still serves the prior verified build until this commit is deployed. The next
+frontier is the normal release of this visual commit and, separately, any owner-
+reviewed analytical calibration or future product scope. No engineering or
+regulatory approval is implied.

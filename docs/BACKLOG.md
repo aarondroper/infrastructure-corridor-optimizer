@@ -163,8 +163,11 @@ Produce professional route-impact metrics, crossing inventories, and compact web
 the verified `workers.dev` origin. The React/TypeScript + MapLibre app builds and
 compares precomputed routes, exposes impact inspection and working GeoJSON/CSV
 exports, and has passed public-origin Chromium verification at
-desktop/laptop/tablet/mobile viewports. Automated accessibility auditing remains open;
-no product-scope expansion is authorized by this milestone.
+desktop/laptop/tablet/mobile viewports. A focused Source Sans 3/map-first visual
+refinement is now implemented and verified against the production preview at all
+required viewports; the current public origin still serves the prior verified build
+until this commit is released. Automated accessibility auditing remains open; no
+product-scope expansion is authorized by this milestone.
 
 ### Objective
 
