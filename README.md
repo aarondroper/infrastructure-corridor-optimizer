@@ -7,6 +7,8 @@ route-impact assessment to show how different planning priorities change a corri
 
 **Live application:** [infrastructure-corridor-optimizer.aaronroper.workers.dev](https://infrastructure-corridor-optimizer.aaronroper.workers.dev)
 
+[![Infrastructure Corridor Optimizer application](docs/assets/application-preview.png)](https://infrastructure-corridor-optimizer.aaronroper.workers.dev/)
+
 ## What it demonstrates
 
 - reproducible public-data acquisition and provenance;
