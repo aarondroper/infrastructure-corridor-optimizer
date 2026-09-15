@@ -1,139 +1,113 @@
-# Analytical Model
+# Analytical model
 
-**Status:** Implemented dependency-light core with approved S1 sensitivity configuration
+The Infrastructure Corridor Optimizer is a preliminary screening model for a fixed
+Scenario S1 corridor between Bayswater in the Upper Hunter and Eraring near Lake
+Macquarie. It is not a construction, permitting, cadastral, geotechnical, or detailed
+electrical design system.
 
-## Scope
+## Endpoints and grid
 
-The approved study direction is Scenario S1: an early-stage corridor screen between
-the Bayswater area in the Upper Hunter and the Eraring area near Lake Macquarie. The
-published Hunter Transmission Project corridor is contextual reference material,
-not the optimizer's target or validation route.
+Geoscience Australia Electricity Infrastructure records supply the fixed endpoints:
 
-The product remains a preliminary screening tool. A generated route is not a
-construction, permitting, geotechnical, cadastral, or detailed electrical design.
+| Role | Feature | Object ID | Capacity | Coordinates |
+| --- | --- | ---: | ---: | --- |
+| Origin | Bayswater | 251 | 2,640 MW | -32.39525728, 150.94913566 |
+| Destination | Eraring | 286 | 2,880 MW | -33.06206226, 151.52065341 |
 
-## Approved source-backed endpoints
-
-The current Geoscience Australia Electricity Infrastructure service is the source of
-the fixed endpoint records. The model snapshot records:
-
-| Role | Feature | Object ID | Capacity | Latitude | Longitude |
-| --- | --- | ---: | ---: | ---: | ---: |
-| Origin | Bayswater | 251 | 2,640 MW | -32.39525728 | 150.94913566 |
-| Destination | Eraring | 286 | 2,880 MW | -33.06206226 | 151.52065341 |
-
-The Eraring feature is the major 2,880 MW record among duplicate feature-name
-results. The exact identifiers, global IDs, locality, state, status, source snapshot,
-and coordinate reference systems are in `config/model.json`; source acquisition must
-revalidate them before generating derived assets.
+The processing envelope is represented in GDA2020 geographic coordinates and the
+working analysis grid uses 100 m cells in EPSG:7856. Source rasters are reprojected
+and aligned to this grid; source vectors are validated, normalized, and rasterized
+where they contribute to the cost surface. Missing or non-finite required inputs
+produce unavailable cells rather than silently creating a complete-looking route.
 
 ## Cost components
 
-The approved sensitivity model uses seven interpretable components:
+The model combines seven interpretable components:
 
-1. base movement/route length;
-2. DEM-derived terrain difficulty, initially represented by slope;
-3. NPWS protected or managed land;
-4. SVTM native-vegetation sensitivity;
+1. base movement cost representing route length;
+2. DEM-derived terrain difficulty, represented by slope;
+3. NSW NPWS protected or managed land;
+4. NSW State Vegetation Type Map native-vegetation sensitivity;
 5. hydrography and water-area crossings;
 6. road crossings;
 7. railway crossings.
 
-Length is the ordinary base cost. The other six components are weighted penalties,
-not universal hard exclusions. This preserves route alternatives for a screening
-comparison while avoiding the unsupported claim that a public indicator alone proves
-legal infeasibility. Missing or non-finite analytical inputs remain unavailable cells
-so incomplete data cannot silently produce a plausible route.
+Length is the ordinary base cost. The other components are weighted penalties, not
+universal hard exclusions. This preserves alternative paths for comparison without
+claiming that a public environmental or infrastructure indicator alone proves legal
+infeasibility. The core API supports infinite unavailable cells and hard exclusions,
+but the approved S1 configuration uses the penalty treatment for environmental and
+crossing factors.
 
-## Normalization and combination
+## Normalization and weights
 
-The current configuration is explicit and approved for sensitivity comparison; the
-source-derived transformations remain provisional even after the first geographic
-build because this is a preliminary screening model:
+Component values are normalized before combination:
 
-- slope is linearly clamped from 0 to 20 degrees to [0, 1];
-- binary indicator surfaces use 0 outside and 1 inside the mapped feature;
-- crossings use source feature-class mappings and are independently counted during
-  route assessment;
-- component grids are combined as a non-negative weighted sum;
-- optional hard-exclusion cells are supported by the core API but are not enabled by
-  the approved S1 penalty policy.
+- slope is linearly clamped from 0 to 20 degrees into [0, 1];
+- binary indicators use 0 outside and 1 inside the mapped feature;
+- crossing penalties use source feature-class mappings, with independent intersection
+  counts reported during route assessment;
+- the combined cell cost is a non-negative weighted sum.
 
-The `shortest`, `balanced`, and `environmental` profiles in `config/model.json` are
-approved sensitivity presets for the MVP. They sum to one and cover the same seven
-components so their route trade-offs can be compared without changing the model
-schema. They remain planning assumptions rather than objective or engineering truths,
-and should be recalibrated only if geographic validation shows that the resulting
-trade-offs are not meaningful.
+The three profiles in `config/model.json` are sensitivity presets over the same seven
+components:
 
-### Terrain source policy
+- **Shortest** strongly favors route length;
+- **Balanced** moderates length against terrain, environmental sensitivity, and
+  crossings;
+- **Environmental** gives greater weight to protected land and native vegetation
+  while retaining a length control.
 
-The approved terrain order is ELVIS/NSW DEM first, followed by a dated Copernicus DEM
-GLO-30 artifact when the primary is unavailable or fails validation. The terrain
-selection boundary requires a local raster artifact sidecar to declare its source ID,
-artifact CRS, processing-envelope CRS, resolution, complete bounds coverage, nodata
-metadata, and acquisition timestamp. `src/ico_model/terrain.py` records which source
-was selected and why. The current build uses the validated Copernicus fallback tiles,
-reprojects them to the S1 100 m EPSG:7856 grid, and derives slope with finite-
-difference gradients. This remains a preliminary terrain proxy, not construction-
-grade terrain analysis.
+Weights are planning assumptions, not objective truths. The preset comparison is
+intended to expose trade-offs rather than identify a single universally correct route.
 
-## Routing core
+## Terrain and vegetation treatment
 
-`src/ico_model/routing.py` provides deterministic eight-neighbor least-cost routing
-with orthogonal distance 1 and diagonal distance √2. The edge cost is the average of
-the adjacent cell costs multiplied by movement distance. Infinite cells are
-unavailable, and diagonal moves cannot cut between two blocked orthogonal corners.
-The API reports the route cells, total cost, and explored-cell count.
+The terrain policy prefers an ELVIS/NSW DEM artifact and permits the validated,
+dated Copernicus DEM GLO-30 fallback when the preferred raster is unavailable. The
+current S1 build uses four public Copernicus tiles, reprojected to EPSG:7856, with
+finite-difference slope derived on the 100 m grid. This is a terrain proxy suitable
+for preliminary screening, not construction-grade survey or geotechnical analysis.
 
-The benchmark uses deterministic synthetic penalty landscapes at 128², 256², and
-512². A* and Dijkstra returned the same costs and path lengths. A* explored 8,023 vs
-16,281 cells at 128², 27,635 vs 65,032 at 256², and 111,200 vs 260,119 at 512²;
-the recorded wall-clock results are in `benchmarks/results.json`. A* explored 51–57%
-fewer cells and was 35–50% faster in these runs. This supports A* as the current
-offline routing implementation. It does not establish browser capacity, geographic
-route quality, or a final grid resolution.
+The official SVTM Extant C2.0.M2.2 classified raster is read from the validated
+package and windowed to S1. Its PCT/VAT classes provide the native-vegetation
+sensitivity indicator. The package's raster representation is analytically aligned
+to the grid; the separate REST polygon inventory is not treated as an equivalent
+feature-count gate.
 
-## Execution boundary
+## Routing
 
-The approved MVP direction is precomputed routes for a static application:
-generate a small number of reviewed profiles offline and ship compact route/metric
-assets. Client-side arbitrary weighting should remain deferred until a real derived
-grid and browser benchmark show that it is responsive and useful. A smaller hybrid
-client grid is not part of the approved MVP, but could be considered through a future
-owner-reviewed scope change.
+`src/ico_model/routing.py` implements deterministic eight-neighbor least-cost routing.
+Orthogonal moves have distance 1 and diagonal moves have distance √2. An edge cost
+uses the average of the adjacent cell costs multiplied by movement distance. Diagonal
+movement cannot cut between two blocked orthogonal corners. A* is used for published
+routes, with Dijkstra retained as a comparison path in the core implementation.
+
+A deterministic proxy benchmark at 128², 256², and 512² returned equal A*/Dijkstra
+path costs while A* explored fewer cells. Results are retained in
+`benchmarks/results.json`.
+
+Routes are generated offline from the validated geographic grid by
+`scripts/generate_precomputed_routes.py`. The browser does not recalculate routes;
+it consumes the compact route/assessment asset generated by the build pipeline.
 
 ## Independent route assessment
 
-The composite cost is not the only output. Each route now reports physical or
-countable measures supported by the selected sources: length, terrain statistics,
-protected-land overlap, native-vegetation class/cell inventory, watercourse
-intersections, road intersections by source hierarchy, and railway crossings. These
-metrics explain trade-offs and are calculated independently of the composite score.
+`src/ico_model.route_assessment` and `src/ico_model.route_impacts` assess generated
+routes independently of the composite routing score. They report route length,
+slope, endpoint and grid-quality diagnostics, protected-area interactions, native
+vegetation cell classes, hydrography intersections, road crossings, railway
+crossings, and source feature details where available.
 
-## Geographic grid implementation
+The web asset builder removes private source paths while retaining the route data,
+assessment values, comparison fields, and enough provenance for the static product.
+See [Route assessment](ROUTE_ASSESSMENT.md) for the measured S1 results and
+[Data sources](DATA_SOURCES.md) for source provenance.
 
-`scripts/derive_geographic_grid.py` validates the complete persistent vector
-manifests and the Copernicus/SVTM inputs, then creates the current 100 m S1 grid.
-Vector layers are rasterized as binary masks with `all_touched=True`; invalid
-NPWS polygon geometries are repaired with Shapely `make_valid` and the repair
-count is recorded in the grid provenance. The SVTM
-classified PCT raster is treated as native vegetation when its value is greater
-than zero; value 0 is the package's "Not classified" category and is not marked as
-native vegetation. DEM or SVTM nodata cells are recorded as unavailable and excluded
-by the route generator. These choices preserve the approved penalty interpretation;
-they do not assert legal clearing status.
+## Interpretation limits
 
-## Implementation boundary
-
-The routing core remains dependency-light and validates normalized rectangular grids;
-optional Rasterio/Fiona/Shapely tooling is isolated to preprocessing and assessment.
-`ico_model.precomputed_routes` applies the approved presets to the geographic bundle
-and writes route-cell assets. The current S1 build also publishes EPSG:7844 GeoJSON,
-physical route metrics, feature-level vector inventories, SVTM raster class
-inventories, and route plausibility diagnostics. `scripts/build_web_assets.py`
-packages these results for the static application. Feature intersections use a
-centerline through 100 m cell centres; they are not surveyed corridor footprints.
-Hydroline, road, and railway counts are intersected source features, so segmented
-source data can produce more records than a human would regard as distinct named
-crossings.
+The 100 m grid, source resolution, generalized indicators, raster/vector
+transformations, and provisional normalization all limit precision. A route centerline
+is not a surveyed alignment. Land access, property rights, environmental assessment,
+permitting, regulatory review, field investigation, engineering design, and detailed
+terrain or constructability studies remain outside this model.

@@ -1,260 +1,125 @@
-# Acquisition Operations and Storage Safety
+# Acquisition operations
 
-This document records the storage contract for potentially large source captures.
-Raw source data is external build input and is ignored by Git; it must not be
-stored in `/tmp` for a full run.
+Large source captures are reproducible build inputs, not runtime application
+assets. They stay outside Git under persistent project storage and are never
+placed in the system temporary directory for a full run.
 
-## Current storage paths
+## Persistent storage contract
 
-The production vector CLI defaults to these paths, resolved relative to the
-repository working directory:
+The production acquisition commands resolve their defaults relative to the
+repository:
 
-- `data/external/vectors/` — final staged-and-published ArcGIS feature artifacts and
-  the compact `acquisition_manifest.json`;
-- `data/cache/arcgis/` — resumable page caches, under fixed
-  `<source-id>--<component>--page-<page-size>/tile-####-page-#####.json`
-  namespaces; the page size is part of the namespace so incompatible page
-  batches cannot be resumed accidentally;
-- `data/external/dem/copernicus-glo30-s1/` — Copernicus GeoTIFF/XML tiles and
-  `dem_manifest.json`.
-- `data/cache/seed/svtm-c2.0.m2.2/` — the official SVTM package archive, its
-  `.zip.part` resumable download, and its `.state.json` acquisition state;
-- `data/external/vectors/svtm-package/` — the package inspection manifest and any
-  explicitly selected members after a geospatial reader validates them. The CLI
-  never extracts the statewide package implicitly.
+- `data/external/vectors/` — validated final vector artifacts and compact
+  acquisition manifests;
+- `data/cache/arcgis/` — resumable ArcGIS page caches, namespaced by source,
+  component, and page size;
+- `data/cache/seed/svtm-c2.0.m2.2/` — the official SVTM package, resumable
+  `.zip.part` state, and package acquisition metadata;
+- `data/external/vectors/svtm-package/` — the selected S1 SVTM raster and
+  validation reports;
+- `data/external/dem/copernicus-glo30-s1/` — four validated GLO-30 tiles,
+  XML sidecars, and `dem_manifest.json`.
 
-The vector writer creates `data/external/vectors/.staging-<random>/` beneath the
-selected output directory. It moves completed artifacts into the output directory
-only after all selected pages validate. `write_manifest` creates a sibling
-`<manifest>.tmp` file and atomically replaces the destination. The DEM downloader
-creates a sibling hidden temporary file beside each destination tile, replaces the
-tile after checksum validation, and removes the temporary file in its normal
-failure path.
+Vector staging directories are created beneath the selected output root and are
+atomically finalized. Manifest writes use sibling temporary files. DEM downloads
+use a temporary file beside the destination tile and replace it only after
+checksum validation. The SVTM reader uses GDAL `/vsizip/` and does not extract
+the statewide geodatabase implicitly.
 
-Other acquisition/report commands write only their explicitly supplied manifest
-or report path (the small-command defaults are `data/source_manifest.json`,
-`data/source_probe.json`, and `data/terrain_selection.json`). There is no hidden
-retry database, daemon queue, or automatic global cache. ArcGIS retry state exists
-only in process memory; vector resume state is the validated page JSON under the
-selected cache root; DEM resume state is the already checksum-verified tile files
-under the selected DEM output. Unit tests use Python temporary directories, but
-that is test scaffolding rather than a production acquisition location.
+Production commands reject roots under Python's temporary directory, `/var/tmp`,
+or `/dev/shm`; the explicit `--allow-temporary-path` option exists only for
+small bounded probes and test fixtures. No production command has an implicit
+global cache or retry database. Validated pages are retained for `--resume`, so
+abandoned cache namespaces must be reviewed and removed with the cleanup command
+below.
 
-No production code hard-codes `/tmp` for source data. The only uses of Python's
-temporary-file APIs are the vector staging directory (explicitly created beneath
-the selected output root) and the DEM per-tile download temporary file (explicitly
-created beside the selected tile). If a caller supplied `/tmp` as either root in
-the old CLI, those descendants therefore landed in `/tmp`; the new production CLI
-rejects that unless the bounded-probe override is explicit.
+## Guardrails and resumability
 
-The CLI rejects output/cache paths under Python's `tempfile.gettempdir()`,
-`/var/tmp`, or `/dev/shm` unless `--allow-temporary-path` is explicitly supplied
-for a small bounded probe. The library API accepts caller-selected paths for test
-fixtures; production commands should use the persistent defaults or explicit
-project data paths. Output and cache roots must be separate.
+The ArcGIS acquisition limits are configured in the source code and summarized
+here:
 
-The package downloader uses only the persistent cache path for the archive and
-resume state. Selected-member extraction creates a short-lived `.staging-svtm-*`
-directory beside the persistent package output, then atomically moves the selected
-member tree into place. It does not use Python's default temporary directory for
-large package data.
-
-## Safety limits
-
-The configured ArcGIS limits are:
-
-| Limit | Value | Purpose |
+| Limit | Default | Purpose |
 | --- | ---: | --- |
-| response and page bytes | 32 MB | reject unexpectedly large service responses before page serialization grows further |
-| unique expected features | 300,000 | stop before feature retrieval if source scale changes materially |
-| tiled inventory IDs | 1,000,000 | bound overlap amplification across tiles |
-| expected pages | 1,000 | bound pagination work before downloads |
-| cache bytes | 8 GB | bound all retained page caches under the selected cache root |
-| staging bytes | 4 GB | bound the in-progress published artifact |
-| combined cache + staging bytes | 12 GB | bound the main duplicate working set |
+| response/page bytes | 32 MB | reject unexpectedly large responses |
+| expected unique features | 300,000 | detect material source-scale changes |
+| tiled inventory IDs | 1,000,000 | bound overlap amplification |
+| expected pages | 1,000 | bound pagination |
+| retained cache bytes | 8 GB | bound page-cache growth |
+| staged artifact bytes | 4 GB | bound in-progress output |
+| cache plus staging | 12 GB | bound duplicate working set |
 
-The SVTM bulk-package limits are:
+The SVTM package limits are a 4 GB archive, 8 GB declared extracted members,
+12 GB archive plus selected extraction, and 100,000 ZIP members. The owner-
+supplied archive is 4,720,800,490 bytes, so it is recorded as an exception to
+the normal download cap rather than downloaded by the CLI. The validator records
+that exception while still bounding selected extraction and working set. Limits
+are not weakened for a normal source run.
 
-| Limit | Value | Purpose |
+Each request validates HTTP status, content type, payload bytes, page identity,
+feature count, and study-envelope relationship before caching. Tiled inventories
+are reconciled and overlapping features are deduplicated before finalization.
+Retries use bounded backoff and replace the same validated page name; they do not
+create a new copy. A failed run publishes no final manifest. A process killed
+mid-write may leave a staging directory or `.tmp` file, which is why cleanup is
+explicit and dry-run-first.
+
+Before a full capture, the CLI reports the cache, output, staging, limits, and
+estimated working set. It fails safely on runaway response, page, feature, cache,
+staging, or combined-working-set growth. The configured study envelope is passed
+to every inventory and query; pages whose geometries fall outside the allowed
+relationship are rejected rather than silently accepted.
+
+## Current S1 captures
+
+The validated S1 inventories contain:
+
+| Component | Features | Representation |
 | --- | ---: | --- |
-| archive bytes | 4 GB | refuse an unbounded or unexpectedly large package download |
-| declared extracted member bytes | 8 GB | reject ZIP bombs or statewide materialization beyond the configured bound |
-| archive plus selected extraction | 12 GB | keep an explicit package archive and selected analytical members within the working-set budget |
-| ZIP members | 100,000 | reject pathological package inventories before inspection |
+| NPWS protected land | 20 | vector |
+| Hydroline | 68,320 | vector |
+| Hydroarea | 12,652 | vector |
+| roads | 46,092 | vector |
+| railways | 415 | vector |
+| SVTM REST inventory evidence | 216,808 | polygon inventory; not the raster acceptance gate |
 
-The acquisition query records feature-payload bytes, newly written cache-page
-bytes, cache-page count, tile inventory, expected pages, and returned counts. Each
-page is checked against the page limit; the cache and combined staging working set
-are checked as pages complete. A limit failure removes the incomplete staging
-artifact and publishes no acquisition manifest. Validated page caches remain for
-an explicit `--resume` rerun.
+The approved SVTM C2.0.M2.2 package contains the analytical classified 5 m
+GeoTIFF, its value-attribute table and metadata, an MXD, and a large Quickview
+geodatabase. The archive is a valid 72-member ZIP with SHA-256
+`e8d92c9a2b661b4265df90e239608a7a6e7c17bde0d57809a08f67182b187952`. Its
+statewide geodatabase declares approximately 12.6 GB and the package declares
+approximately 16.1 GB of extracted members, so only the S1 raster is read through
+`/vsizip/` and materialized. The S1 raster is EPSG:3308, uint16, nodata 65535,
+with 1,687 VAT records. Its manifest and content report are written under the
+ignored SVTM package directory.
 
-The package downloader records archive bytes, SHA-256, response state, and resume
-offsets. It requires a positive `Content-Length`, refuses to append unless a resumed
-response is HTTP 206 with a matching `Content-Range`, and rejects non-ZIP responses
-such as the current SEED HTTP 202 web challenge. A package is not analytically
-accepted from ZIP structure alone: a reader-produced content report must show
-complete S1-scoped coverage, polygon geometry, EPSG:3308, required PCT/vegetation
-fields, zero duplicate IDs, and reconciliation to the known REST count of 216,808
-features.
+The four GLO-30 tiles occupy 160,523,100 bytes including XML sidecars. They
+cover S1, use EPSG:4326 source coordinates and nominal one-arcsecond/30 m
+resolution, and record XML nodata `-32767`; the grid stage reprojects them to
+EPSG:7856.
 
-## Audit findings (13 September 2026)
+## Reproducible workflow
 
-The original incident cannot be attributed definitively because the temporary
-directories were deleted before forensic inspection. Repository evidence does
-show that a full run can be multi-gigabyte:
-
-- the current bounded count-only probes returned 216,808 SVTM polygons and 68,320
-  Hydroline features in S1;
-- a 20-feature geometry sample serialized at about 8.1 KB per SVTM feature and
-  0.77 KB per Hydroline feature;
-- this implies roughly 1.7–2.0 GB for a compact SVTM feature artifact and about
-  53 MB for Hydroline, before cache/staging duplication and tile-boundary overlap;
-- the 0.1° SVTM configuration creates up to 81 tiles. A polygon intersecting more
-  than one tile is cached in each tile page, then deduplicated in the published
-  artifact. That intentional resumability duplication can materially increase
-  cache size;
-- a fresh cache directory or namespace is not automatically removed after a
-  failure. Repeated runs under fresh temporary paths can therefore retain several
-  complete partial caches. A single estimated run does not explain 396 GB, but
-  repeated abandoned runs, extreme overlap, or another process could plausibly
-  account for that scale.
-
-Retries do not create new page filenames: they repeat the same HTTP request and
-replace the same cache page only after validation. A failed run removes its staged
-artifact in normal exception handling but intentionally retains validated pages for
-resume; an abrupt process kill can leave a `.staging-*` directory or a sibling
-`.tmp` file, which is why the cleanup procedure is dry-run-first. A new cache root
-or namespace, however, is a new physical copy by design and must be cleaned up
-explicitly.
-
-The DEM workflow is much smaller for S1: four public GLO-30 tiles totaling about
-163 MB from the observed object sizes, plus XML metadata, one temporary tile copy
-while downloading, and a small manifest. It does not create a page-cache namespace.
-The DEM CLI bounds the tile set to 16 tiles and downloaded GeoTIFF bytes to 300 MB
-by default; S1's four-tile set is below both limits.
-
-The persistent Copernicus artifact was restored on 13 September 2026. Its four
-tiles and XML sidecars occupy 160,523,100 bytes (`du -sb`), and its manifest
-records complete S1 coverage, EPSG:4326, nominal 30 m/one-arcsecond resolution,
-and XML nodata `-32767`.
-
-## Official SVTM bulk-package investigation
-
-Data.NSW metadata identifies the resource as the NSW State Vegetation Type Map -
-SVTM (Extant), release C2.0.M2.2 (December 2025), under Creative Commons
-Attribution. The configured SEED resource is an acquisition-engineering delivery
-alternative for that same approved dataset, not a vegetation-source substitution.
-The Data.NSW API does not publish a package byte size. The resource page describes
-the supplied download package as an ArcGIS 10.8 MXD and/or layer file for suggested
-symbology, while the analytical map data is separately described as an ESRI Feature
-Class and 5 m GeoTIFF. Therefore a downloaded ZIP is not assumed to contain vector
-data: the inspector rejects a documentation-only package, and a geospatial reader
-must supply the content report before model use.
-
-A bounded live probe on 13 September 2026 received HTTP 202 with an interactive
-web challenge and wrote only the persistent 423-byte state file. No archive bytes
-were written and no retry loop was started. Do not repeatedly hammer this endpoint.
-
-The owner-supplied archive was later inspected in place at
-`data/cache/seed/svtm-c2.0.m2.2/svtm_nsw_extant_pct_vc2_0_m2_2_108.zip`. It is
-4,720,800,490 bytes with SHA-256
-`e8d92c9a2b661b4265df90e239608a7a6e7c17bde0d57809a08f67182b187952`, contains
-72 members, and passes whole-archive CRC validation. The inventory includes a
-12.6 GB-declared Quickview geodatabase, a classified 5 m GeoTIFF with VAT and
-metadata, and an MXD. The archive exceeds the configured 4 GB download cap and
-the package's declared 16.1 GB extraction exceeds the 8 GB extraction cap. The
-workflow therefore reads the TIFF through GDAL `/vsizip/` and writes only the S1
-100 m artifact under `data/external/vectors/svtm-package/`; it does not extract the
-statewide geodatabase. The resulting raster is EPSG:3308, uint16, nodata 65535,
-789x1005 cells, and has 1,687 VAT records. Its provenance and content report are
-`svtm_s1_raster_manifest.json` and `s1-svtm-raster-content-report.json` in that
-ignored persistent directory. The measured package-plus-output working set is
-4,721,081,685 bytes.
-
-The direct validation command is:
+Install the optional geospatial dependencies, then use the source-specific
+commands with the persistent defaults:
 
 ```bash
+python3 -m pip install -e '.[geospatial]'
+PYTHONPATH=src python3 scripts/acquire_vector_sources.py --help
+PYTHONPATH=src python3 scripts/acquire_copernicus_dem.py --help
 PYTHONPATH=src python3 scripts/validate_svtm_raster.py \
   --archive data/cache/seed/svtm-c2.0.m2.2/svtm_nsw_extant_pct_vc2_0_m2_2_108.zip \
   --output-dir data/external/vectors/svtm-package --cell-size-m 100
 ```
 
-## Geographic derivation and route handoff
+After all required manifests validate, the grid, route, assessment, and web
+asset commands are shown in [ARCHITECTURE.md](ARCHITECTURE.md) and use only
+project-relative persistent paths. Source identities, versions, licenses, and
+links are catalogued in [DATA_SOURCES.md](DATA_SOURCES.md).
 
-Once the validated persistent source artifacts are present, derive the current
-100 m grid with the optional geospatial extra installed:
+## Cleanup
 
-```bash
-PYTHONPATH=src:. python3 scripts/derive_geographic_grid.py \
-  --dem-dir data/external/dem/copernicus-glo30-s1 \
-  --svtm-raster data/external/vectors/svtm-package/s1-svtm-100m.tif \
-  --protected-land-manifest data/external/vectors/s1-npws-estate/acquisition_manifest.json \
-  --hydrography-line-manifest data/external/vectors/s1-hydrography-line-final/acquisition_manifest.json \
-  --hydrography-area-manifest data/external/vectors/s1-hydrography-area/acquisition_manifest.json \
-  --roads-manifest data/external/vectors/s1-roads/acquisition_manifest.json \
-  --railways-manifest data/external/vectors/s1-railways/acquisition_manifest.json \
-  --output data/external/grids/s1-100m/normalized_grid_bundle.json
-PYTHONPATH=src python3 scripts/generate_precomputed_routes.py \
-  --grid-bundle data/external/grids/s1-100m/normalized_grid_bundle.json \
-  --output-dir data/external/routes/s1-100m
-PYTHONPATH=src:. python3 scripts/assess_routes.py \
-  --grid-bundle data/external/grids/s1-100m/normalized_grid_bundle.json \
-  --routes-dir data/external/routes/s1-100m \
-  --config config/model.json \
-  --protected-land data/external/vectors/s1-npws-estate/nsw-npws-estate--protected_land.json \
-  --hydrography-line data/external/vectors/s1-hydrography-line-final/nsw-hydrography--hydrography_line.json \
-  --hydrography-area data/external/vectors/s1-hydrography-area/nsw-hydrography--hydrography_area.json \
-  --roads data/external/vectors/s1-roads/nsw-transport--roads.json \
-  --railways data/external/vectors/s1-railways/nsw-transport--railways.json \
-  --svtm-raster data/external/vectors/svtm-package/s1-svtm-100m.tif \
-  --svtm-archive data/cache/seed/svtm-c2.0.m2.2/svtm_nsw_extant_pct_vc2_0_m2_2_108.zip \
-  --output data/external/routes/s1-100m/route_assessments.json
-PYTHONPATH=src python3 scripts/build_web_assets.py \
-  --assessments data/external/routes/s1-100m/route_assessments.json \
-  --routes-dir data/external/routes/s1-100m \
-  --config config/model.json \
-  --output web/public/data/routes.json
-```
-
-The current measured outputs are a 990x767 grid (approximately 60 MB because the
-raw slope diagnostic is retained), 8,329 unavailable cells, and three routes of
-95.76 km, 96.28 km, and 99.17 km for shortest, balanced, and environmental
-respectively. The assessment command adds feature-level inventories for the five
-vector layers, SVTM class inventories, physical slope metrics, endpoint/grid-quality
-checks, and a comparison summary. Raw source geometries remain outside the compact
-application asset.
-
-The command refuses to overwrite an existing output. Keep the archive and derived
-artifact outside Git; use the cleanup procedure below only for abandoned cache or
-staging directories, not for this validated source package.
-When access is available, use:
-
-```bash
-PYTHONPATH=src python3 scripts/acquire_svtm_package.py \
-  --cache-dir data/cache/seed/svtm-c2.0.m2.2 \
-  --output-dir data/external/vectors/svtm-package \
-  --timeout 60 --max-retries 3 \
-  --content-report <reader-produced-s1-content-report.json> \
-  --extract-member <explicit-vector-member> \
-  --extract-member <matching-attribute-sidecar>
-```
-
-First inspect the ZIP manifest/member list and select only the vector and required
-sidecars. The content report must be generated from those selected members and must
-reconcile the REST inventory/count evidence before the artifact is accepted.
-
-The acquisition logic only discovers IDs using tiles generated from the configured
-S1 envelope. Feature pages are requested by those exact IDs, without re-sending an
-unbounded geometry filter. Full source geometries may extend beyond the envelope
-because ArcGIS returns whole intersecting features; that is expected source
-semantics, not an unbounded query. Tile overlap is deduplicated by object ID with a
-small coordinate tolerance for reprojection round-off, while genuine conflicting
-duplicates fail validation.
-
-## Cleanup and safe resumption
-
-Review abandoned directories without deleting anything:
+Review abandoned cache pages, stale staging directories, and old package state
+with:
 
 ```bash
 PYTHONPATH=src python3 scripts/cleanup_acquisition_storage.py \
@@ -263,39 +128,12 @@ PYTHONPATH=src python3 scripts/cleanup_acquisition_storage.py \
   --older-than-hours 24
 ```
 
-After confirming that no acquisition process is running, repeat with `--delete`.
-The cleanup script only targets cache namespace directories and `.staging-*`
-directories older than the threshold; it does not remove final artifacts or
-manifests. For a failed DEM run, inspect `data/external/dem/.../tiles/` and rerun
-the DEM command: valid existing tiles are checksum-reused and no manifest is
-published until every tile validates.
+After reviewing the exact candidates, add `--delete` to remove only the reported
+stale acquisition artifacts. Keep the current manifests and validated source
+artifacts unless deliberately rebuilding them.
 
-Future full captures should be run one component at a time from persistent roots,
-with the same cache root retained for resume. SVTM uses a measured 250-feature
-page size because a 1,000-feature request exceeded the unchanged 32 MB response
-ceiling; the largest observed 250-feature page was 28.1 MB. The safe vector
-workflow is:
+## Operational boundary
 
-```bash
-PYTHONPATH=src python3 scripts/acquire_vector_sources.py \
-  --source-id nsw-hydrography --component hydrography_line \
-  --output-dir data/external/vectors/s1-hydrography-line \
-  --cache-dir data/cache/arcgis/s1 \
-  --timeout 30
-```
-
-If interrupted after validated pages are cached, rerun the identical command with
-`--resume`. Do not create a new cache directory unless intentionally starting a
-new source snapshot, and clean the old namespace afterward. To remove one known
-abandoned namespace without scanning or touching sibling captures, use the
-explicit `--cache-namespace <path>` cleanup option; review its dry-run output
-before adding `--delete`. The current SVTM run has 190 validated cached pages but
-no published artifact because the service subsequently returned repeated HTTP 500
-and timeout/HTTP 400 failures during tiled inventory. It is resumable with:
-
-```bash
-PYTHONPATH=src python3 scripts/acquire_vector_sources.py \
-  --source-id nsw-svtm --component native_vegetation \
-  --output-dir data/external/vectors/s1-native-vegetation-final \
-  --cache-dir data/cache/arcgis/s1 --timeout 30 --resume
-```
+Acquisition is an offline build concern. The public application receives only
+the compact generated route/assessment asset; it never downloads or stores raw
+GIS sources in the browser.
